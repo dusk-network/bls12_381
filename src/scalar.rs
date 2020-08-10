@@ -10,7 +10,7 @@ use serde::{de::Visitor, Deserialize, Deserializer, Serialize, Serializer};
 use std::borrow::Borrow;
 use std::cmp::{Ord, Ordering, PartialOrd};
 use std::iter::{Product, Sum};
-use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
+use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption, Choice};
 
 /// Represents an element of the scalar field $\mathbb{F}_q$ of the BLS12-381 elliptic
 /// curve construction.
@@ -344,6 +344,16 @@ impl Scalar {
     #[inline]
     pub const fn one() -> Scalar {
         R
+    }
+
+    /// Checks in ct_time whether a Scalar is equal to zero.
+    pub const fn is_zero(&self) -> Choice {
+        self.ct_eq(&Scalar::zero())
+    }
+
+    /// Checks in ct_time whether a Scalar is equal to one.   
+    pub const fn is_one(&self) -> Choice {
+        self.ct_eq(&Scalar::one())
     }
 
     /// Returns the internal representation of the Scalar.
