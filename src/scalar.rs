@@ -10,7 +10,7 @@ use serde::{de::Visitor, Deserialize, Deserializer, Serialize, Serializer};
 use std::borrow::Borrow;
 use std::cmp::{Ord, Ordering, PartialOrd};
 use std::iter::{Product, Sum};
-use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption, Choice};
+use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 
 /// Represents an element of the scalar field $\mathbb{F}_q$ of the BLS12-381 elliptic
 /// curve construction.
@@ -347,12 +347,12 @@ impl Scalar {
     }
 
     /// Checks in ct_time whether a Scalar is equal to zero.
-    pub const fn is_zero(&self) -> Choice {
+    pub fn is_zero(&self) -> Choice {
         self.ct_eq(&Scalar::zero())
     }
 
     /// Checks in ct_time whether a Scalar is equal to one.   
-    pub const fn is_one(&self) -> Choice {
+    pub fn is_one(&self) -> Choice {
         self.ct_eq(&Scalar::one())
     }
 
@@ -602,6 +602,20 @@ impl Scalar {
                 }
             }
         }
+        res
+    }
+
+    /// Computes `2^X` where X is a `u64` without the need to generate
+    // an array in the stack as `pow` & `pow_vartime` require.
+    pub fn pow_of_2(by: u64) -> Self {
+        let two = Scalar::from(2u64);
+        let mut res = Self::one();
+        for i in (0..64).rev() {
+                res = res.square();
+                let mut tmp = res;
+                tmp *= two;
+                res.conditional_assign(&tmp, (((by >> i) & 0x1) as u8).into());
+            }
         res
     }
 
@@ -1386,4 +1400,12 @@ fn bit_repr() {
     let two_pow_128_minus_rand = Scalar::from(2u64).pow(&[128,0,0,0]) - Scalar::from(7568589u64);
     let two_pow_128_bits  = [1u8, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
     assert_eq!(&two_pow_128_minus_rand.to_bits()[..128], &two_pow_128_bits[..])
+}
+
+#[test]
+fn pow_of_two_test() {
+    let two = Scalar::from(2u64);
+    for i in 0..1000 {
+        assert_eq!(Scalar::pow_of_2(i as u64), two.pow(&[i as u64,0,0,0]));
+    }
 }
