@@ -122,7 +122,7 @@ fn to_radix_2w_size_hint(w: usize) -> usize {
         6 => (256 + w - 1) / w as usize,
         7 => (256 + w - 1) / w as usize,
         // See comment in to_radix_2w on handling the terminal carry.
-        8 => (256 + w - 1) / w + 1 as usize,
+        8 => (256 + w - 1) / w + 1_usize,
         _ => panic!("invalid radix parameter"),
     };
 

@@ -281,13 +281,13 @@ impl Fp2 {
         // c0' = (c0 + c1) * (c0 - c1)
         // c1' = 2 * c0 * c1
 
-        let a = (&self.c0).add(&self.c1);
-        let b = (&self.c0).sub(&self.c1);
-        let c = (&self.c0).add(&self.c0);
+        let a = self.c0.add_fp(&self.c1);
+        let b = self.c0.sub_fp(&self.c1);
+        let c = self.c0.add_fp(&self.c0);
 
         Fp2 {
-            c0: (&a).mul(&b),
-            c1: (&c).mul(&self.c1),
+            c0: a.mul_fp(&b),
+            c1: c.mul_fp(&self.c1),
         }
     }
 
@@ -312,22 +312,22 @@ impl Fp2 {
 
     pub const fn add(&self, rhs: &Fp2) -> Fp2 {
         Fp2 {
-            c0: (&self.c0).add(&rhs.c0),
-            c1: (&self.c1).add(&rhs.c1),
+            c0: self.c0.add_fp(&rhs.c0),
+            c1: self.c1.add_fp(&rhs.c1),
         }
     }
 
     pub const fn sub(&self, rhs: &Fp2) -> Fp2 {
         Fp2 {
-            c0: (&self.c0).sub(&rhs.c0),
-            c1: (&self.c1).sub(&rhs.c1),
+            c0: self.c0.sub_fp(&rhs.c0),
+            c1: self.c1.sub_fp(&rhs.c1),
         }
     }
 
     pub const fn neg(&self) -> Fp2 {
         Fp2 {
-            c0: (&self.c0).neg(),
-            c1: (&self.c1).neg(),
+            c0: self.c0.neg_fp(),
+            c1: self.c1.neg_fp(),
         }
     }
 
@@ -361,7 +361,7 @@ impl Fp2 {
                     c0: -x0.c1,
                     c1: x0.c0,
                 },
-                alpha.ct_eq(&(&Fp2::one()).neg()),
+                alpha.ct_eq(&(Fp2::one()).neg()),
             )
             // Otherwise, the correct solution is (1 + alpha)^((q - 1) // 2) * x0
             .or_else(|| {

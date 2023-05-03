@@ -404,6 +404,7 @@ impl G1Affine {
 
     /// Create a `G1Affine` from a set of bytes created by `G1Affine::to_raw_bytes`.
     ///
+    /// # Safety
     /// No check is performed and no constant time is granted. The expected usage of this function
     /// is for trusted bytes where performance is critical.
     ///
@@ -479,7 +480,7 @@ fn endomorphism(p: &G1Affine) -> G1Affine {
     // Endomorphism of the points on the curve.
     // endomorphism_p(x,y) = (BETA * x, y)
     // where BETA is a non-trivial cubic root of unity in Fq.
-    let mut res = p.clone();
+    let mut res = *p;
     res.x *= BETA;
     res
 }
@@ -899,7 +900,7 @@ impl G1Projective {
             q.y = p.y * tmp3;
             q.infinity = 0u8.into();
 
-            *q = G1Affine::conditional_select(&q, &G1Affine::identity(), skip);
+            *q = G1Affine::conditional_select(q, &G1Affine::identity(), skip);
         }
     }
 

@@ -342,6 +342,7 @@ impl G2Prepared {
 
     /// Create a `G2Prepared` from a set of bytes created by `G2Prepared::to_raw_bytes`.
     ///
+    /// # Safety
     /// No check is performed and no constant time is granted. The `infinity` attribute is also
     /// lost. The expected usage of this function is for trusted bytes where performance is
     /// critical.
@@ -614,8 +615,8 @@ pub fn pairing(p: &G1Affine, q: &G2Affine) -> Gt {
     }
 
     let either_identity = p.is_identity() | q.is_identity();
-    let p = G1Affine::conditional_select(&p, &G1Affine::generator(), either_identity);
-    let q = G2Affine::conditional_select(&q, &G2Affine::generator(), either_identity);
+    let p = G1Affine::conditional_select(p, &G1Affine::generator(), either_identity);
+    let q = G2Affine::conditional_select(q, &G2Affine::generator(), either_identity);
 
     let mut adder = Adder {
         cur: G2Projective::from(q),

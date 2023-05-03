@@ -133,8 +133,8 @@ impl Serializable<96> for G2Affine {
 
         let mut res = [0; Self::SIZE];
 
-        (&mut res[0..48]).copy_from_slice(&x.c1.to_bytes()[..]);
-        (&mut res[48..96]).copy_from_slice(&x.c0.to_bytes()[..]);
+        res[0..48].copy_from_slice(&x.c1.to_bytes()[..]);
+        res[48..96].copy_from_slice(&x.c0.to_bytes()[..]);
 
         // This point is in compressed form, so we set the most significant bit.
         res[0] |= 1u8 << 7;
@@ -459,6 +459,7 @@ impl G2Affine {
 
     /// Create a `G2Affine` from a set of bytes created by `G2Affine::to_raw_bytes`.
     ///
+    /// # Safety
     /// No check is performed and no constant time is granted. The expected usage of this function
     /// is for trusted bytes where performance is critical.
     ///
@@ -1060,7 +1061,7 @@ impl G2Projective {
             q.y = p.y * tmp3;
             q.infinity = 0u8.into();
 
-            *q = G2Affine::conditional_select(&q, &G2Affine::identity(), skip);
+            *q = G2Affine::conditional_select(q, &G2Affine::identity(), skip);
         }
     }
 

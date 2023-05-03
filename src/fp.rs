@@ -264,7 +264,7 @@ impl Fp {
 
     /// Converts an element of `Fp` into a byte representation in
     /// big-endian byte order.
-    pub fn to_bytes(&self) -> [u8; 48] {
+    pub fn to_bytes(self) -> [u8; 48] {
         // Turn into canonical form by computing
         // (a.R) / R = a
         let tmp = Fp::montgomery_reduce(
@@ -408,7 +408,12 @@ impl Fp {
 
         // Attempt to subtract the modulus, to ensure the value
         // is smaller than the modulus.
-        (&Fp([d0, d1, d2, d3, d4, d5])).subtract_p()
+        Fp([d0, d1, d2, d3, d4, d5]).subtract_p()
+    }
+
+    #[inline]
+    pub const fn add_fp(&self, rhs: &Fp) -> Fp {
+        self.add(rhs)
     }
 
     #[inline]
@@ -437,8 +442,18 @@ impl Fp {
     }
 
     #[inline]
+    pub const fn neg_fp(&self) -> Fp {
+        self.neg()
+    }
+
+    #[inline]
     pub const fn sub(&self, rhs: &Fp) -> Fp {
-        (&rhs.neg()).add(self)
+        rhs.neg_fp().add_fp(self)
+    }
+
+    #[inline]
+    pub const fn sub_fp(&self, rhs: &Fp) -> Fp {
+        self.sub(rhs)
     }
 
     /// Returns `c = a.zip(b).fold(0, |acc, (a_i, b_i)| acc + a_i * b_i)`.
@@ -499,7 +514,7 @@ impl Fp {
 
         // Because we represent F_p elements in non-redundant form, we need a final
         // conditional subtraction to ensure the output is in range.
-        (&Fp([u0, u1, u2, u3, u4, u5])).subtract_p()
+        Fp([u0, u1, u2, u3, u4, u5]).subtract_p()
     }
 
     #[inline(always)]
@@ -577,7 +592,7 @@ impl Fp {
 
         // Attempt to subtract the modulus, to ensure the value
         // is smaller than the modulus.
-        (&Fp([r6, r7, r8, r9, r10, r11])).subtract_p()
+        Fp([r6, r7, r8, r9, r10, r11]).subtract_p()
     }
 
     #[inline]
@@ -625,6 +640,11 @@ impl Fp {
         let (t10, t11) = mac(t10, self.0[5], rhs.0[5], carry);
 
         Self::montgomery_reduce(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11)
+    }
+
+    #[inline]
+    pub const fn mul_fp(&self, rhs: &Fp) -> Fp {
+        self.mul(rhs)
     }
 
     /// Squares this element.
