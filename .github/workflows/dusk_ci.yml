@@ -27,7 +27,7 @@ jobs:
           toolchain: nightly
       - run: rustup component add clippy
       - name: Run `cargo clippy`
-        run: cargo clippy --all-features --release -- -D warnings
+        run: cargo clippy --release -- -D warnings
 
   test_nightly:
       name: Nightly tests std

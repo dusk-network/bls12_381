@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Add a `clippy` action to CI and fix warnings [#77]
+
 ### Changed
 - Update issue links in CHANGELOG [#84]
 
@@ -174,6 +177,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Rename `S` to `TWO_ADACITY` and export it
 
 <!-- Issues -->
+[#77]: (https://github.com/dusk-network/bls12_381/issues/77)
 [#84]: (https://github.com/dusk-network/bls12_381/issues/84)
 [#94]: (https://github.com/dusk-network/bls12_381/issues/94)
 [#90]: (https://github.com/dusk-network/bls12_381/issues/90)
