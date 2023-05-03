@@ -473,7 +473,7 @@ impl Scalar {
     /// Converts from an integer represented in little endian
     /// into its (congruent) `Scalar` representation.
     pub const fn from_raw(val: [u64; 4]) -> Self {
-        (&Scalar(val)).mul(&R2)
+        Scalar(val).mul_scalar(&R2)
     }
 
     /// Generate a valid Scalar choosen uniformly using user-
@@ -786,7 +786,7 @@ impl Scalar {
         let (r7, _) = adc(r7, carry2, carry);
 
         // Result may be within MODULUS of the correct value
-        (&Scalar([r4, r5, r6, r7])).sub(&MODULUS)
+        Scalar([r4, r5, r6, r7]).sub_scalar(&MODULUS)
     }
 
     /// Multiplies `rhs` by `self`, returning the result.
@@ -817,6 +817,12 @@ impl Scalar {
         Scalar::montgomery_reduce(r0, r1, r2, r3, r4, r5, r6, r7)
     }
 
+    /// Multiplies `rhs` by `self`, returning the result. Proxy for [`scalar::mul`].
+    #[inline]
+    pub const fn mul_scalar(&self, rhs: &Self) -> Self {
+        self.mul(rhs)
+    }
+
     /// Subtracts `rhs` from `self`, returning the result.
     #[inline]
     pub const fn sub(&self, rhs: &Self) -> Self {
@@ -835,6 +841,12 @@ impl Scalar {
         Scalar([d0, d1, d2, d3])
     }
 
+    /// Subtracts `rhs` from `self`, returning the result. Proxy for [`scalar::sub`].
+    #[inline]
+    pub const fn sub_scalar(&self, rhs: &Self) -> Self {
+        self.sub(rhs)
+    }
+
     /// Adds `rhs` to `self`, returning the result.
     #[inline]
     pub const fn add(&self, rhs: &Self) -> Self {
@@ -845,7 +857,13 @@ impl Scalar {
 
         // Attempt to subtract the modulus, to ensure the value
         // is smaller than the modulus.
-        (&Scalar([d0, d1, d2, d3])).sub(&MODULUS)
+        Scalar([d0, d1, d2, d3]).sub_scalar(&MODULUS)
+    }
+
+    /// Adds `rhs` to `self`, returning the result. Proxy for [`scalar::add`].
+    #[inline]
+    pub const fn add_scalar(&self, rhs: &Self) -> Self {
+        self.add(rhs)
     }
 
     /// Negates `self`.
@@ -864,6 +882,12 @@ impl Scalar {
         let mask = (((self.0[0] | self.0[1] | self.0[2] | self.0[3]) == 0) as u64).wrapping_sub(1);
 
         Scalar([d0 & mask, d1 & mask, d2 & mask, d3 & mask])
+    }
+
+    /// Negates `self`. Proxy for [`scalar::neg`].
+    #[inline]
+    pub const fn neg_scalar(&self) -> Self {
+        self.neg()
     }
 
     /// SHR impl
