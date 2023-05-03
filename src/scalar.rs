@@ -63,10 +63,10 @@ impl PartialOrd for Scalar {
 impl Ord for Scalar {
     fn cmp(&self, other: &Self) -> Ordering {
         for i in (0..4).rev() {
-            if self.0[i] > other.0[i] {
-                return Ordering::Greater;
-            } else if self.0[i] < other.0[i] {
-                return Ordering::Less;
+            match self.0[i].cmp(&other.0[i]) {
+                Ordering::Greater => return Ordering::Greater,
+                Ordering::Less => return Ordering::Less,
+                Ordering::Equal => (),
             }
         }
         Ordering::Equal

@@ -16,6 +16,8 @@ where
     P: Iterator<Item = G1Projective>,
     I: Iterator<Item = Scalar>,
 {
+    use core::cmp::Ordering;
+
     let size = scalars.size_hint().0;
 
     // Digit width in bits. As digit width grows,
@@ -46,8 +48,8 @@ where
 
     let mut columns = (0..digits_count).rev().map(|digit_index| {
         // Clear the buckets when processing another digit.
-        for i in 0..buckets_count {
-            buckets[i] = G1Projective::identity();
+        for bucket in buckets.iter_mut().take(buckets_count) {
+            *bucket = G1Projective::identity();
         }
 
         // Iterate over pairs of (point, scalar)
@@ -57,12 +59,16 @@ where
         for (digits, pt) in scalars_points.iter() {
             // Widen digit so that we don't run into edge cases when w=8.
             let digit = digits[digit_index] as i16;
-            if digit > 0 {
-                let b = (digit - 1) as usize;
-                buckets[b] = buckets[b] + pt;
-            } else if digit < 0 {
-                let b = (-digit - 1) as usize;
-                buckets[b] = buckets[b] - pt;
+            match digit.cmp(&0) {
+                Ordering::Greater => {
+                    let b = (digit - 1) as usize;
+                    buckets[b] += pt;
+                }
+                Ordering::Less => {
+                    let b = (-digit - 1) as usize;
+                    buckets[b] -= pt;
+                }
+                Ordering::Equal => (),
             }
         }
 
@@ -141,30 +147,28 @@ fn to_radix_2w(scalar: &Scalar, w: usize) -> [i8; 43] {
     let mut carry = 0u64;
     let mut digits = [0i8; 43];
     let digits_count = (256 + w - 1) / w as usize;
-    for i in 0..digits_count {
+    for (i, digit) in digits.iter_mut().enumerate().take(digits_count) {
         // Construct a buffer of bits of the scalar, starting at `bit_offset`.
         let bit_offset = i * w;
         let u64_idx = bit_offset / 64;
         let bit_idx = bit_offset % 64;
 
         // Read the bits from the scalar
-        let bit_buf: u64;
-        if bit_idx < 64 - w || u64_idx == 3 {
+        let bit_buf: u64 = if bit_idx < 64 - w || u64_idx == 3 {
             // This window's bits are contained in a single u64,
             // or it's the last u64 anyway.
-            bit_buf = scalar64x4[u64_idx] >> bit_idx;
+            scalar64x4[u64_idx] >> bit_idx
         } else {
             // Combine the current u64's bits with the bits from the next u64
-            bit_buf =
-                (scalar64x4[u64_idx] >> bit_idx) | (scalar64x4[1 + u64_idx] << (64 - bit_idx));
-        }
+            (scalar64x4[u64_idx] >> bit_idx) | (scalar64x4[1 + u64_idx] << (64 - bit_idx))
+        };
 
         // Read the actual coefficient value from the window
         let coef = carry + (bit_buf & window_mask); // coef = [0, 2^r)
 
         // Recenter coefficients from [0,2^w) to [-2^w/2, 2^w/2)
         carry = (coef + (radix / 2) as u64) >> w;
-        digits[i] = ((coef as i64) - (carry << w) as i64) as i8;
+        *digit = ((coef as i64) - (carry << w) as i64) as i8;
     }
 
     // When w < 8, we can fold the final carry onto the last digit d,
@@ -216,7 +220,7 @@ pub fn msm_variable_base(points: &[G1Affine], scalars: &[Scalar]) -> G1Projectiv
             scalars
                 .iter()
                 .zip(points)
-                .filter(|(s, _)| !(*s == &Scalar::zero()))
+                .filter(|(s, _)| (*s != &Scalar::zero()))
                 .for_each(|(&scalar, base)| {
                     if scalar == fr_one {
                         // We only process unit scalars once in the first window.
@@ -245,7 +249,7 @@ pub fn msm_variable_base(points: &[G1Affine], scalars: &[Scalar]) -> G1Projectiv
 
             let mut running_sum = G1Projective::identity();
             for b in buckets.into_iter().rev() {
-                running_sum = running_sum + b;
+                running_sum += b;
                 res += &running_sum;
             }
 
