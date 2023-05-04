@@ -342,11 +342,10 @@ impl G2Prepared {
 
     /// Create a `G2Prepared` from a set of bytes created by `G2Prepared::to_raw_bytes`.
     ///
-    /// # Safety
     /// No check is performed and no constant time is granted. The `infinity` attribute is also
     /// lost. The expected usage of this function is for trusted bytes where performance is
     /// critical.
-    pub unsafe fn from_slice_unchecked(bytes: &[u8]) -> Self {
+    pub fn from_slice_unchecked(bytes: &[u8]) -> Self {
         let coeffs = bytes
             .chunks_exact(288)
             .map(|c| {
@@ -868,7 +867,7 @@ mod tests {
         let g2_prepared = G2Prepared::from(G2Affine::generator());
         let bytes = g2_prepared.to_raw_bytes();
 
-        let g2_prepared_p = unsafe { G2Prepared::from_slice_unchecked(&bytes) };
+        let g2_prepared_p = G2Prepared::from_slice_unchecked(&bytes);
 
         assert_eq!(g2_prepared.coeffs, g2_prepared_p.coeffs);
     }

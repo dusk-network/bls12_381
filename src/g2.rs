@@ -459,7 +459,6 @@ impl G2Affine {
 
     /// Create a `G2Affine` from a set of bytes created by `G2Affine::to_raw_bytes`.
     ///
-    /// # Safety
     /// No check is performed and no constant time is granted. The expected usage of this function
     /// is for trusted bytes where performance is critical.
     ///
@@ -467,7 +466,7 @@ impl G2Affine {
     ///
     /// After generating the point, you can check `is_on_curve` and `is_torsion_free` to grant its
     /// security
-    pub unsafe fn from_slice_unchecked(bytes: &[u8]) -> Self {
+    pub fn from_slice_unchecked(bytes: &[u8]) -> Self {
         let mut xc0 = [0u64; 6];
         let mut xc1 = [0u64; 6];
         let mut yc0 = [0u64; 6];
@@ -1993,10 +1992,10 @@ mod tests {
         let ident = G2Affine::identity();
 
         let gen_p = gen.to_raw_bytes();
-        let gen_p = unsafe { G2Affine::from_slice_unchecked(&gen_p) };
+        let gen_p = G2Affine::from_slice_unchecked(&gen_p);
 
         let ident_p = ident.to_raw_bytes();
-        let ident_p = unsafe { G2Affine::from_slice_unchecked(&ident_p) };
+        let ident_p = G2Affine::from_slice_unchecked(&ident_p);
 
         assert_eq!(gen, gen_p);
         assert_eq!(ident, ident_p);

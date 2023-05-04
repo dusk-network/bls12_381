@@ -404,7 +404,6 @@ impl G1Affine {
 
     /// Create a `G1Affine` from a set of bytes created by `G1Affine::to_raw_bytes`.
     ///
-    /// # Safety
     /// No check is performed and no constant time is granted. The expected usage of this function
     /// is for trusted bytes where performance is critical.
     ///
@@ -412,7 +411,7 @@ impl G1Affine {
     ///
     /// After generating the point, you can check `is_on_curve` and `is_torsion_free` to grant its
     /// security
-    pub unsafe fn from_slice_unchecked(bytes: &[u8]) -> Self {
+    pub fn from_slice_unchecked(bytes: &[u8]) -> Self {
         let mut x = [0u64; 6];
         let mut y = [0u64; 6];
         let mut z = [0u8; 8];
@@ -1574,10 +1573,10 @@ mod tests {
         let ident = G1Affine::identity();
 
         let gen_p = gen.to_raw_bytes();
-        let gen_p = unsafe { G1Affine::from_slice_unchecked(&gen_p) };
+        let gen_p = G1Affine::from_slice_unchecked(&gen_p);
 
         let ident_p = ident.to_raw_bytes();
-        let ident_p = unsafe { G1Affine::from_slice_unchecked(&ident_p) };
+        let ident_p = G1Affine::from_slice_unchecked(&ident_p);
 
         assert_eq!(gen, gen_p);
         assert_eq!(ident, ident_p);
@@ -1607,7 +1606,7 @@ mod tests {
         let g = G1Affine { x, y, infinity };
 
         let g_p = g.to_raw_bytes();
-        let g_p = unsafe { G1Affine::from_slice_unchecked(&g_p) };
+        let g_p = G1Affine::from_slice_unchecked(&g_p);
 
         assert_eq!(g, g_p);
     }
