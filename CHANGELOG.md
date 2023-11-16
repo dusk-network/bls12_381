@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## Added
+
+- Add random scalar generator `UniScalarRng` for uniformly distributed scalar generation [#129]
+
+## Remove
+
+- Remove `uni_random` scalar generation in favor of `UniScalarRng` [#129]
+
 ## [0.12.3] - 2023-11-01
 
 ### Added
@@ -221,6 +229,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- Issues -->
 [#125]: https://github.com/dusk-network/bls12_381/issues/125
+[#129]: https://github.com/dusk-network/bls12_381/issues/129
 [#117]: https://github.com/dusk-network/bls12_381/issues/117
 [#109]: https://github.com/dusk-network/bls12_381/issues/109
 [#108]: https://github.com/dusk-network/bls12_381/issues/108

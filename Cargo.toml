@@ -100,6 +100,9 @@ optional = true
 
 [dependencies.dusk-bytes]
 version = "0.1"
+
+[dependencies.rand]
+version = "0.8"
 # End
 
 [features]

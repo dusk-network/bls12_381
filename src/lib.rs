@@ -48,6 +48,7 @@ mod dusk;
 use dusk::choice;
 #[cfg(all(feature = "groups", feature = "alloc"))]
 pub use dusk::multiscalar_mul;
+pub use scalar::dusk::UniScalarRng;
 
 mod scalar;
 
