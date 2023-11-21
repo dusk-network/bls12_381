@@ -297,6 +297,36 @@ impl Scalar {
         scalar.unwrap()
     }
 
+    /// Creates a `Scalar` from arbitrary bytes by hashing the input with BLAKE2b into a 256-bits
+    /// number, and then converting it into its `Scalar` representation.
+    pub fn from_var_bytes(input: &[u8]) -> Scalar {
+        let state = blake2b_simd::Params::new()
+            .hash_length(32)
+            .to_state()
+            .update(input)
+            .finalize();
+
+        let h = state.as_bytes();
+        let mut r = [0u64; 4];
+
+        // will be optmized by the compiler, depending on the available target
+        for i in 0..4 {
+            r[i] = u64::from_le_bytes([
+                h[i * 8],
+                h[i * 8 + 1],
+                h[i * 8 + 2],
+                h[i * 8 + 3],
+                h[i * 8 + 4],
+                h[i * 8 + 5],
+                h[i * 8 + 6],
+                h[i * 8 + 7],
+            ]);
+        }
+
+        // `from_raw` converts from arbitrary to congruent scalar
+        Self::from_raw(r)
+    }
+
     /// SHR impl
     #[inline]
     pub fn divn(&mut self, mut n: u32) {
@@ -445,4 +475,28 @@ fn test_scalar_eq_and_hash() {
     // Check if hash results are consistent with PartialEq results
     assert_eq!(hash_r0, hash_r1);
     assert_ne!(hash_r0, hash_r2);
+}
+
+#[cfg(all(test, feature = "alloc"))]
+mod fuzz {
+    use alloc::vec::Vec;
+
+    use super::super::MODULUS;
+    use super::Scalar;
+    use crate::util::sbb;
+
+    quickcheck::quickcheck! {
+        fn prop_scalar_from_raw_bytes(bytes: Vec<u8>) -> bool {
+            let Scalar(s) = Scalar::from_var_bytes(&bytes);
+            let Scalar(m) = MODULUS;
+
+            // subtraction against modulus must underflow
+            let (_, borrow) = sbb(s[0], m[0], 0);
+            let (_, borrow) = sbb(s[1], m[1], borrow);
+            let (_, borrow) = sbb(s[2], m[2], borrow);
+            let (_, borrow) = sbb(s[3], m[3], borrow);
+
+            ((borrow as u8) & 1) == 1
+        }
+    }
 }
