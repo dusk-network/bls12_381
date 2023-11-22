@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add `from_var_bytes` to scalar
+
 ## [0.12.3] - 2023-11-01
 
 ### Added
