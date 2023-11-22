@@ -481,8 +481,7 @@ fn test_scalar_eq_and_hash() {
 mod fuzz {
     use alloc::vec::Vec;
 
-    use super::super::MODULUS;
-    use super::Scalar;
+    use crate::scalar::{Scalar, MODULUS};
     use crate::util::sbb;
 
     quickcheck::quickcheck! {
@@ -491,12 +490,9 @@ mod fuzz {
             let Scalar(m) = MODULUS;
 
             // subtraction against modulus must underflow
-            let (_, borrow) = sbb(s[0], m[0], 0);
-            let (_, borrow) = sbb(s[1], m[1], borrow);
-            let (_, borrow) = sbb(s[2], m[2], borrow);
-            let (_, borrow) = sbb(s[3], m[3], borrow);
+            let borrow = s.iter().zip(m.iter()).fold(0, |borrow, (&s, &m)| sbb(s, m, borrow).1);
 
-            ((borrow as u8) & 1) == 1
+            (borrow >> 63) == 1
         }
     }
 }
