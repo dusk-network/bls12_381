@@ -281,23 +281,20 @@ impl Scalar {
     where
         R: RngCore + CryptoRng,
     {
-        loop {
-            let s0 = rng.next_u64();
-            let s1 = rng.next_u64();
-            let s2 = rng.next_u64();
-            let s3 = rng.next_u64();
+        let mut buf = [0; 32];
+        let mut scalar: Option<Self> = None;
 
-            let bx = s3 <= MODULUS.0[3];
-            let b1 = bx && MODULUS.0[0] > s0;
-            let b2 = bx && (MODULUS.0[1] + b1 as u64) > s1;
-            let b3 = bx && (MODULUS.0[2] + b2 as u64) > s2;
-            let b4 = bx && (MODULUS.0[3] + b3 as u64) > s3;
-
-            // there is a borrow; hence, in range
-            if b4 {
-                return Self::from_raw([s0, s1, s2, s3]);
-            }
+        // We loop as long as it takes to generate a valid scalar.
+        // As long as the random number generator is implemented properly, this
+        // loop will terminate.
+        while scalar == None {
+            rng.fill_bytes(&mut buf);
+            // Since modulus has at most 255 bits, we can zero the MSB and like
+            // this improve our chances of hitting a valid scalar to above 50%
+            buf[32 - 1] &= 0b0111_1111;
+            scalar = Self::from_bytes(&buf).into();
         }
+        scalar.unwrap()
     }
 
     /// Creates a `Scalar` from arbitrary bytes by hashing the input with BLAKE2b into a 256-bits
@@ -484,9 +481,6 @@ fn test_scalar_eq_and_hash() {
 mod fuzz {
     use alloc::vec::Vec;
 
-    use rand::rngs::StdRng;
-    use rand::SeedableRng;
-
     use crate::scalar::{Scalar, MODULUS};
     use crate::util::sbb;
 
@@ -504,15 +498,6 @@ mod fuzz {
     quickcheck::quickcheck! {
         fn prop_scalar_from_raw_bytes(bytes: Vec<u8>) -> bool {
             let scalar = Scalar::from_var_bytes(&bytes);
-
-            is_scalar_in_range(&scalar)
-        }
-    }
-
-    quickcheck::quickcheck! {
-        fn prop_scalar_uni_random(seed: u64) -> bool {
-            let rng = &mut StdRng::seed_from_u64(seed);
-            let scalar = Scalar::uni_random(rng);
 
             is_scalar_in_range(&scalar)
         }

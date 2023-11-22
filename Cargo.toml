@@ -32,7 +32,6 @@ sha2 = "0.9"
 sha3 = "0.9"
 # Dev-dependencies added by Dusk
 bincode = "1"
-rand = "0.8"
 rkyv = {version = "0.7", default-features = false, features = ["size_32"]}
 quickcheck = "1"
 
