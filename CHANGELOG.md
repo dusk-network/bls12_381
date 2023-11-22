@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add `from_var_bytes` to scalar
 
+### Changed
+
+- Change `Scalar::uni_random` to sample u64 without manipulating bits
+
 ## [0.12.3] - 2023-11-01
 
 ### Added
