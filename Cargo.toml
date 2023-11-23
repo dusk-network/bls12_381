@@ -33,6 +33,7 @@ sha3 = "0.9"
 # Dev-dependencies added by Dusk
 bincode = "1"
 rkyv = {version = "0.7", default-features = false, features = ["size_32"]}
+quickcheck = "1"
 
 [[bench]]
 name = "groups"
@@ -75,6 +76,10 @@ default-features = false
 optional = true
 
 # Start of dependencies added by Dusk
+[dependencies.blake2b_simd]
+version = "1.0"
+default-features = false
+
 [dependencies.byteorder]
 version = "1"
 default-features = false
