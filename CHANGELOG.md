@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- Remove `uni_random` from scalar [#135]
+
 ### Added
 
 - Add `from_var_bytes` to scalar [#133]
@@ -224,6 +228,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Rename `S` to `TWO_ADACITY` and export it
 
 <!-- Issues -->
+[#135]: https://github.com/dusk-network/bls12_381/issues/135
 [#133]: https://github.com/dusk-network/bls12_381/issues/133
 [#125]: https://github.com/dusk-network/bls12_381/issues/125
 [#117]: https://github.com/dusk-network/bls12_381/issues/117

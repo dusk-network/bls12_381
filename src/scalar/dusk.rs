@@ -262,41 +262,6 @@ impl Scalar {
         res
     }
 
-    /// Compute a uniformly distributed random scalar.
-    ///
-    /// Because scalars take 255 bits for encoding it is difficult to generate
-    /// random bit-pattern that ensures to encodes a valid scalar.
-    /// Wrapping the values that are higher than [`MODULUS`], as done in
-    /// [`Self::random`], results in hitting some values more than others, and
-    /// zeroing out the highest two bits will eliminate some values from the
-    /// possible results.
-    ///
-    /// This function achieves a uniform distribution of scalars by using
-    /// rejection sampling: random bit-patterns are generated until a valid
-    /// scalar is found.
-    /// The function is not constant time but that shouldn't be a concern since
-    /// no information about the scalar can be gained by knowing the time of
-    /// its generation.
-    pub fn uni_random<R>(rng: &mut R) -> Self
-    where
-        R: RngCore + CryptoRng,
-    {
-        let mut buf = [0; 32];
-        let mut scalar: Option<Self> = None;
-
-        // We loop as long as it takes to generate a valid scalar.
-        // As long as the random number generator is implemented properly, this
-        // loop will terminate.
-        while scalar == None {
-            rng.fill_bytes(&mut buf);
-            // Since modulus has at most 255 bits, we can zero the MSB and like
-            // this improve our chances of hitting a valid scalar to above 50%
-            buf[32 - 1] &= 0b0111_1111;
-            scalar = Self::from_bytes(&buf).into();
-        }
-        scalar.unwrap()
-    }
-
     /// Creates a `Scalar` from arbitrary bytes by hashing the input with BLAKE2b into a 256-bits
     /// number, and then converting it into its `Scalar` representation.
     pub fn from_var_bytes(input: &[u8]) -> Scalar {
