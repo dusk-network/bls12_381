@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Add `from_var_bytes` to scalar [#133]
+- Add `from_var_bytes` to scalar [#133] and refactor and rename to `hash_to_scalar` [#137]
 
 ## [0.12.3] - 2023-11-01
 
@@ -228,6 +228,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Rename `S` to `TWO_ADACITY` and export it
 
 <!-- Issues -->
+[#137]: https://github.com/dusk-network/bls12_381/issues/137
 [#135]: https://github.com/dusk-network/bls12_381/issues/135
 [#133]: https://github.com/dusk-network/bls12_381/issues/133
 [#125]: https://github.com/dusk-network/bls12_381/issues/125

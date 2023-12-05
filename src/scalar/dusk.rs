@@ -9,7 +9,6 @@ use core::convert::TryFrom;
 use core::hash::{Hash, Hasher};
 use core::ops::{BitAnd, BitXor};
 use dusk_bytes::{Error as BytesError, Serializable};
-use rand_core::{CryptoRng, RngCore};
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq};
 
 use super::{Scalar, MODULUS, R2};
@@ -262,34 +261,43 @@ impl Scalar {
         res
     }
 
-    /// Creates a `Scalar` from arbitrary bytes by hashing the input with BLAKE2b into a 256-bits
-    /// number, and then converting it into its `Scalar` representation.
-    pub fn from_var_bytes(input: &[u8]) -> Scalar {
+    /// Creates a `Scalar` from arbitrary bytes by hashing the input with
+    /// BLAKE2b into a 512-bits number, and then converting the number into its
+    /// `Scalar` representation by reducing it by the modulo.
+    ///
+    /// By treating the output of the BLAKE2b hash as a random oracle, this
+    /// implementation follows the first conversion of
+    /// https://hackmd.io/zV6qe1_oSU-kYU6Tt7pO7Q with concrete numbers:
+    /// ```text
+    /// p = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001
+    /// p = 52435875175126190479447740508185965837690552500527637822603658699938581184513
+    ///
+    /// s = 2^512
+    /// s = 13407807929942597099574024998205846127479365820592393377723561443721764030073546976801874298166903427690031858186486050853753882811946569946433649006084096
+    ///
+    /// r = 255699135089535202043525422716183576215815630510683217819334674386498370757523
+    ///
+    /// m = 3294906474794265442129797520630710739278575682199800681788903916070560242797
+    /// ```
+    pub fn hash_to_scalar(input: &[u8]) -> Scalar {
         let state = blake2b_simd::Params::new()
-            .hash_length(32)
+            .hash_length(64)
             .to_state()
             .update(input)
             .finalize();
 
-        let h = state.as_bytes();
-        let mut r = [0u64; 4];
+        let bytes = state.as_bytes();
 
-        // will be optmized by the compiler, depending on the available target
-        for i in 0..4 {
-            r[i] = u64::from_le_bytes([
-                h[i * 8],
-                h[i * 8 + 1],
-                h[i * 8 + 2],
-                h[i * 8 + 3],
-                h[i * 8 + 4],
-                h[i * 8 + 5],
-                h[i * 8 + 6],
-                h[i * 8 + 7],
-            ]);
-        }
-
-        // `from_raw` converts from arbitrary to congruent scalar
-        Self::from_raw(r)
+        Scalar::from_u512([
+            u64::from_le_bytes(<[u8; 8]>::try_from(&bytes[0..8]).unwrap()),
+            u64::from_le_bytes(<[u8; 8]>::try_from(&bytes[8..16]).unwrap()),
+            u64::from_le_bytes(<[u8; 8]>::try_from(&bytes[16..24]).unwrap()),
+            u64::from_le_bytes(<[u8; 8]>::try_from(&bytes[24..32]).unwrap()),
+            u64::from_le_bytes(<[u8; 8]>::try_from(&bytes[32..40]).unwrap()),
+            u64::from_le_bytes(<[u8; 8]>::try_from(&bytes[40..48]).unwrap()),
+            u64::from_le_bytes(<[u8; 8]>::try_from(&bytes[48..56]).unwrap()),
+            u64::from_le_bytes(<[u8; 8]>::try_from(&bytes[56..64]).unwrap()),
+        ])
     }
 
     /// SHR impl
@@ -462,7 +470,7 @@ mod fuzz {
 
     quickcheck::quickcheck! {
         fn prop_scalar_from_raw_bytes(bytes: Vec<u8>) -> bool {
-            let scalar = Scalar::from_var_bytes(&bytes);
+            let scalar = Scalar::hash_to_scalar(&bytes);
 
             is_scalar_in_range(&scalar)
         }
