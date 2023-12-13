@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.0] - 2023-12-13
+
 ### Removed
 
 - Remove `uni_random` from scalar [#135]
@@ -253,7 +255,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [#50]: https://github.com/dusk-network/bls12_381/issues/50
 
 <!-- Versions -->
-[Unreleased]: https://github.com/dusk-network/bls12_381/compare/v0.12.3...HEAD
+[Unreleased]: https://github.com/dusk-network/bls12_381/compare/v0.13.0...HEAD
+[0.13.0]: https://github.com/dusk-network/bls12_381/compare/v0.12.3...v0.13.0
 [0.12.3]: https://github.com/dusk-network/bls12_381/compare/v0.12.2...v0.12.3
 [0.12.2]: https://github.com/dusk-network/bls12_381/compare/v0.12.1...v0.12.2
 [0.12.1]: https://github.com/dusk-network/bls12_381/compare/v0.12.0...v0.12.1
