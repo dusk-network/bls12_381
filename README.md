@@ -2,22 +2,20 @@
 [![Repository](https://img.shields.io/badge/github-dusk--bls12_381-blueviolet?logo=github)](https://github.com/dusk-network/bls12_381)
 [![Documentation](https://img.shields.io/badge/docs-dusk--bls12_381-blue?logo=rust)](https://docs.rs/dusk-bls12_381/)
 
-**THIS CRATE IS A FORK OF [https://github.com/zkcrypto/bls12_381](https://github.com/zkcrypto/bls12_381/) where the Dusk-Network team has added a variety of tools required by other libraries built on the top of this one.
-The 99% of the library stills being done by @ebfull and you SHOULD NOT use this one unless you need a specific tool that we've 
-implemented and it's not on the original library.**
+> :warning: THIS CRATE IS A FORK OF [https://github.com/zkcrypto/bls12_381](https://github.com/zkcrypto/bls12_381/): The Dusk team has added a variety of tools required for its own uses on the top of the original library. You SHOULD NOT use this library unless you need a specific tool that we've implemented and is not available in the original.
 
-## Extra tools added to the original bls12_381 lib:
+## Extra tools added to [bls12_381](https://github.com/zkcrypto/bls12_381/) lib:
 - Add serde support for every single data structure in the crate that is exported.
 - Add various multiscalar_mul algorithms.
-- Use `std & endo` as a default feature.
 - Impl Iter Sum & Product for Scalar.
-- Implement random for Scalar.
+- Implement hash for Scalar.
 - Implement XOR & AND for Scalar.
 - Add base_4 conversion fn (no longer required).
 - Impl Ord & PartialOrd for Scalar.
 - Implement w_naf_scalar_mul (71% faster than the original double-and-add impl).
 - Implement a reduce function wrapper for Scalar.
-- Expose some Scarlar-related Constants as public.
+- Expose some Scalar-related constants as public.
+- Add our own implementation of hashing to a Scalar.
 
 This crate provides an implementation of the BLS12-381 pairing-friendly elliptic curve construction.
 
@@ -32,7 +30,7 @@ This crate provides an implementation of the BLS12-381 pairing-friendly elliptic
 * `groups` (on by default): Enables APIs for performing group arithmetic with G1, G2, and GT.
 * `pairings` (on by default): Enables some APIs for performing pairings.
 * `alloc` (on by default): Enables APIs that require an allocator; these include pairing optimizations.
-* `nightly`: Enables `subtle/nightly` which tries to prevent compiler optimizations that could jeopardize constant time operations. Requires the nightly Rust compiler.
+* `nightly`: Enables `subtle/nightly`, which tries to prevent compiler optimizations that could jeopardize constant time operations. Requires the nightly Rust compiler.
 * `experimental`: Enables experimental features. These features have no backwards-compatibility guarantees and may change at any time; users that depend on specific behaviour should pin an exact version of this crate. The current list of experimental features:
   * Hashing to curves ([Internet Draft v12](https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-12))
 * `parallel` (on by default): Enables `rayon` usage for highly parallelizable ops such as multiscalar multiplication.
@@ -80,7 +78,4 @@ at your option.
 
 ### Contribution
 
-Unless you explicitly state otherwise, any contribution intentionally
-submitted for inclusion in the work by you, as defined in the Apache-2.0
-license, shall be dual licensed as above, without any additional terms or
-conditions.
+Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the work by you, as defined in the Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions.
