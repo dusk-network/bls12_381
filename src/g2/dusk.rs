@@ -224,7 +224,7 @@ impl<'de> Deserialize<'de> for G2Affine {
             type Value = G2Affine;
 
             fn expecting(&self, formatter: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-                formatter.write_str("a 48-byte cannonical compressed G2Affine point from Bls12_381")
+                formatter.write_str("a 48-byte canonical compressed G2Affine point from Bls12_381")
             }
 
             fn visit_seq<A>(self, mut seq: A) -> Result<G2Affine, A::Error>
