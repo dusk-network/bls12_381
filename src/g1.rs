@@ -837,7 +837,7 @@ impl G1Projective {
         }
 
         // This is the inverse, as all z-coordinates are nonzero and the ones
-        // that are not are skipped.
+        // that are not being skipped.
         acc = acc.invert().unwrap();
 
         for (p, q) in p.iter().rev().zip(q.iter_mut().rev()) {
