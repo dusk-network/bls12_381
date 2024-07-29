@@ -323,7 +323,7 @@ impl Fp2 {
         //
         // because a^2 + b^2 = 0 has no nonzero solutions for (a, b).
         // This gives that (a - bu)/(a^2 + b^2) is the inverse
-        // of (a + bu). Importantly, this can be computing using
+        // of (a + bu). Importantly, this can be computed using
         // only a single inversion in Fp.
 
         (self.c0.square() + self.c1.square()).invert().map(|t| Fp2 {
