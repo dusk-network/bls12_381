@@ -6,112 +6,90 @@
 
 use super::Fp6;
 
-use serde::{
-    self, de::Visitor, ser::SerializeStruct, Deserialize, Deserializer, Serialize, Serializer,
-};
+#[cfg(feature = "serde")]
+mod serde_support {
+    use serde::de::{Error as SerdeError, MapAccess, Visitor};
+    use serde::ser::SerializeStruct;
+    use serde::{self, Deserialize, Deserializer, Serialize, Serializer};
 
-impl Serialize for Fp6 {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut fp2 = serializer.serialize_struct("struct Fp6", 3)?;
-        fp2.serialize_field("c0", &self.c0)?;
-        fp2.serialize_field("c1", &self.c1)?;
-        fp2.serialize_field("c2", &self.c2)?;
-        fp2.end()
-    }
-}
+    use super::*;
 
-impl<'de> Deserialize<'de> for Fp6 {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        enum Field {
-            C0,
-            C1,
-            C2,
+    impl Serialize for Fp6 {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            let mut ser_struct = serializer.serialize_struct("Fp6", 3)?;
+            ser_struct.serialize_field("c0", &self.c0)?;
+            ser_struct.serialize_field("c1", &self.c1)?;
+            ser_struct.serialize_field("c2", &self.c2)?;
+            ser_struct.end()
         }
+    }
 
-        impl<'de> Deserialize<'de> for Field {
-            fn deserialize<D>(deserializer: D) -> Result<Field, D::Error>
-            where
-                D: Deserializer<'de>,
-            {
-                struct FieldVisitor;
+    impl<'de> Deserialize<'de> for Fp6 {
+        fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+            struct Fp6Visitor;
 
-                impl<'de> Visitor<'de> for FieldVisitor {
-                    type Value = Field;
+            const FIELDS: &[&str] = &["c0", "c1", "c2"];
 
-                    fn expecting(
-                        &self,
-                        formatter: &mut ::core::fmt::Formatter,
-                    ) -> ::core::fmt::Result {
-                        formatter.write_str("struct Fp6")
-                    }
+            impl<'de> Visitor<'de> for Fp6Visitor {
+                type Value = Fp6;
 
-                    fn visit_str<E>(self, value: &str) -> Result<Field, E>
-                    where
-                        E: serde::de::Error,
-                    {
-                        match value {
-                            "c0" => Ok(Field::C0),
-                            "c1" => Ok(Field::C1),
-                            "c2" => Ok(Field::C2),
-                            _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
-                        }
-                    }
+                fn expecting(&self, formatter: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+                    formatter.write_str("a struct with fields c0, c1 and c2")
                 }
 
-                deserializer.deserialize_identifier(FieldVisitor)
+                fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<Self::Value, A::Error> {
+                    let (mut c0, mut c1, mut c2) = (None, None, None);
+                    while let Some(key) = map.next_key()? {
+                        match key {
+                            "c0" => {
+                                if c0.is_some() {
+                                    return Err(SerdeError::duplicate_field("c0"));
+                                } else {
+                                    c0 = Some(map.next_value()?);
+                                }
+                            }
+                            "c1" => {
+                                if c1.is_some() {
+                                    return Err(SerdeError::duplicate_field("c1"));
+                                } else {
+                                    c1 = Some(map.next_value()?);
+                                }
+                            }
+                            "c2" => {
+                                if c2.is_some() {
+                                    return Err(SerdeError::duplicate_field("c2"));
+                                } else {
+                                    c2 = Some(map.next_value()?);
+                                }
+                            }
+                            field => return Err(SerdeError::unknown_field(field, &FIELDS)),
+                        }
+                    }
+                    Ok(Fp6 {
+                        c0: c0.ok_or_else(|| SerdeError::missing_field("c0"))?,
+                        c1: c1.ok_or_else(|| SerdeError::missing_field("c1"))?,
+                        c2: c2.ok_or_else(|| SerdeError::missing_field("c2"))?,
+                    })
+                }
             }
+
+            deserializer.deserialize_struct("Fp6", FIELDS, Fp6Visitor)
         }
-
-        struct Fp6Visitor;
-
-        impl<'de> Visitor<'de> for Fp6Visitor {
-            type Value = Fp6;
-
-            fn expecting(&self, formatter: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-                formatter.write_str("struct Fp6")
-            }
-
-            fn visit_seq<V>(self, mut seq: V) -> Result<Fp6, V::Error>
-            where
-                V: serde::de::SeqAccess<'de>,
-            {
-                let c0 = seq
-                    .next_element()?
-                    .ok_or_else(|| serde::de::Error::invalid_length(0, &self))?;
-                let c1 = seq
-                    .next_element()?
-                    .ok_or_else(|| serde::de::Error::invalid_length(0, &self))?;
-                let c2 = seq
-                    .next_element()?
-                    .ok_or_else(|| serde::de::Error::invalid_length(0, &self))?;
-                Ok(Fp6 { c0, c1, c2 })
-            }
-        }
-
-        const FIELDS: &[&str] = &["c0", "c1", "c2"];
-        deserializer.deserialize_struct("Fp6", FIELDS, Fp6Visitor)
     }
-}
 
-#[test]
-fn fp6_serde_roundtrip() {
-    use crate::fp2::Fp2;
-    use bincode;
+    #[test]
+    fn serde_fp6() {
+        use rand::rngs::StdRng;
+        use rand_core::SeedableRng;
 
-    let fp6 = Fp6 {
-        c0: Fp2::one(),
-        c1: Fp2::one(),
-        c2: Fp2::one(),
-    };
+        let mut rng = StdRng::seed_from_u64(0xc0b);
+        let fp6 = Fp6::random(&mut rng);
+        let ser = serde_json::to_string(&fp6).unwrap();
+        let deser: Fp6 = serde_json::from_str(&ser).unwrap();
 
-    let ser = bincode::serialize(&fp6).unwrap();
-    let deser: Fp6 = bincode::deserialize(&ser).unwrap();
-
-    assert_eq!(fp6, deser);
+        assert_eq!(fp6, deser);
+    }
 }

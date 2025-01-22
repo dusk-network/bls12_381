@@ -14,70 +14,68 @@ impl Fp {
 }
 
 #[cfg(feature = "serde")]
-use serde::{
-    self, de::Visitor, ser::SerializeSeq, Deserialize, Deserializer, Serialize, Serializer,
-};
+mod serde_support {
+    use alloc::string::{String, ToString};
 
-#[cfg(feature = "serde")]
-impl Serialize for Fp {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut tup = serializer.serialize_seq(Some(48))?;
-        let fp_as_bytes = self.to_bytes();
-        for i in 0..48 {
-            tup.serialize_element(&fp_as_bytes[i])?;
+    use serde::de::Error as SerdeError;
+    use serde::{self, Deserialize, Deserializer, Serialize, Serializer};
+
+    use super::*;
+
+    impl Serialize for Fp {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            let s = hex::encode(self.to_bytes());
+            s.serialize(serializer)
         }
-        tup.end()
     }
-}
 
-#[cfg(feature = "serde")]
-impl<'de> Deserialize<'de> for Fp {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        struct FpVisitor;
-
-        impl<'de> Visitor<'de> for FpVisitor {
-            type Value = Fp;
-
-            fn expecting(&self, formatter: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-                formatter.write_str("a prover key with valid powers per points")
-            }
-
-            fn visit_seq<A>(self, mut seq: A) -> Result<Fp, A::Error>
-            where
-                A: serde::de::SeqAccess<'de>,
-            {
-                let mut bytes = [0u8; 48];
-                for i in 0..48 {
-                    bytes[i] = seq
-                        .next_element()?
-                        .ok_or(serde::de::Error::invalid_length(i, &"expected 48 bytes"))?;
-                }
-                let res = Fp::from_bytes(&bytes);
-                if res.is_some().unwrap_u8() == 1u8 {
-                    return Ok(res.unwrap());
-                } else {
-                    return Err(serde::de::Error::custom(&"fp was not canonically encoded"));
-                }
-            }
+    impl<'de> Deserialize<'de> for Fp {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            let s = String::deserialize(deserializer)?;
+            let decoded = hex::decode(&s).map_err(SerdeError::custom)?;
+            let decoded_len = decoded.len();
+            const FP_BYTES_LEN: usize = 48;
+            let bytes: [u8; FP_BYTES_LEN] = decoded.try_into().map_err(|_| {
+                SerdeError::invalid_length(decoded_len, &FP_BYTES_LEN.to_string().as_str())
+            })?;
+            let fp = Fp::from_bytes(&bytes)
+                .into_option()
+                .ok_or(SerdeError::custom("Failed to deserialize Fp: invalid Fp"))?;
+            Ok(fp)
         }
-
-        deserializer.deserialize_seq(FpVisitor)
     }
-}
 
-#[test]
-#[cfg(feature = "serde")]
-fn fp_serde_roundtrip() {
-    use bincode;
-    let fp = Fp::one();
-    let ser = bincode::serialize(&fp).unwrap();
-    let deser: Fp = bincode::deserialize(&ser).unwrap();
+    #[test]
+    fn serde_fp() {
+        use rand::rngs::StdRng;
+        use rand_core::SeedableRng;
 
-    assert_eq!(fp, deser);
+        let mut rng = StdRng::seed_from_u64(0xc0b);
+        let fp = Fp::random(&mut rng);
+        let ser = serde_json::to_string(&fp).unwrap();
+        let deser: Fp = serde_json::from_str(&ser).unwrap();
+        assert_eq!(fp, deser);
+    }
+
+    #[test]
+    fn serde_fp_too_short_encoded() {
+        let length_47_enc = "\"16e40954bea69030cc133b0597126df8d4d35ed26e4ed93346dcbdc306e2e92039a0d32ccd21176819a26cb9430335\"";
+
+        let fp: Result<Fp, _> = serde_json::from_str(&length_47_enc);
+        assert!(fp.is_err());
+    }
+
+    #[test]
+    fn serde_fp_too_long_encoded() {
+        let length_49_enc = "\"16e40954bea69030cc133b0597126df8d4d35ed26e4ed93346dcbdc306e2e92039a0d32ccd21176819a26cb9430335f200\"";
+
+        let fp: Result<Fp, _> = serde_json::from_str(&length_49_enc);
+        assert!(fp.is_err());
+    }
 }

@@ -14,9 +14,6 @@ use subtle::{Choice, ConditionallySelectable, ConstantTimeEq};
 use super::{Scalar, MODULUS, R2};
 use crate::util::sbb;
 
-#[cfg(feature = "serde")]
-use serde::{de::Visitor, Deserialize, Deserializer, Serialize, Serializer};
-
 impl PartialOrd for Scalar {
     fn partial_cmp(&self, other: &Scalar) -> Option<Ordering> {
         Some(self.cmp(other))
@@ -93,53 +90,67 @@ impl Serializable<32> for Scalar {
 }
 
 #[cfg(feature = "serde")]
-impl Serialize for Scalar {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        use serde::ser::SerializeTuple;
-        let mut tup = serializer.serialize_tuple(Self::SIZE)?;
-        for byte in self.to_bytes().iter() {
-            tup.serialize_element(byte)?;
+mod serde_support {
+    use alloc::string::{String, ToString};
+
+    use serde::de::Error as SerdeError;
+    use serde::{self, Deserialize, Deserializer, Serialize, Serializer};
+
+    use super::*;
+
+    impl Serialize for Scalar {
+        fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+            let s = hex::encode(self.to_bytes());
+            s.serialize(serializer)
         }
-        tup.end()
     }
-}
 
-#[cfg(feature = "serde")]
-impl<'de> Deserialize<'de> for Scalar {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        struct ScalarVisitor;
-
-        impl<'de> Visitor<'de> for ScalarVisitor {
-            type Value = Scalar;
-
-            fn expecting(&self, formatter: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-                formatter.write_str("a 32-byte canonical Scalar from Bls12_381")
-            }
-
-            fn visit_seq<A>(self, mut seq: A) -> Result<Scalar, A::Error>
-            where
-                A: serde::de::SeqAccess<'de>,
-            {
-                let mut bytes = [0u8; Scalar::SIZE];
-
-                for i in 0..Scalar::SIZE {
-                    bytes[i] = seq
-                        .next_element()?
-                        .ok_or(serde::de::Error::invalid_length(i, &"expected 32 bytes"))?;
-                }
-
-                <Scalar as Serializable<32>>::from_bytes(&bytes)
-                    .map_err(|_| serde::de::Error::custom(&"scalar was not canonically encoded"))
-            }
+    impl<'de> Deserialize<'de> for Scalar {
+        fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+            let s = String::deserialize(deserializer)?;
+            let decoded = hex::decode(&s).map_err(SerdeError::custom)?;
+            let decoded_len = decoded.len();
+            let bytes: [u8; Scalar::SIZE] = decoded.try_into().map_err(|_| {
+                SerdeError::invalid_length(decoded_len, &Scalar::SIZE.to_string().as_str())
+            })?;
+            let scalar = Scalar::from_bytes(&bytes)
+                .into_option()
+                .ok_or(SerdeError::custom(
+                    "Failed to deserialize Scalar: invalid Scalar",
+                ))?;
+            Ok(scalar)
         }
+    }
 
-        deserializer.deserialize_tuple(Self::SIZE, ScalarVisitor)
+    #[test]
+    fn serde_scalar() {
+        use ff::Field;
+        use rand::rngs::StdRng;
+        use rand_core::SeedableRng;
+
+        let mut rng = StdRng::seed_from_u64(0xc0b);
+        let scalar = Scalar::random(&mut rng);
+        let ser = serde_json::to_string(&scalar).unwrap();
+        let deser = serde_json::from_str(&ser).unwrap();
+
+        assert_eq!(scalar, deser);
+    }
+
+    #[test]
+    fn serde_scalar_too_short_encoded() {
+        let length_31_enc = "\"fe9a9c1876745ca351435dec31217662ff1fcf67287de6fd9b6c7de1d0846b\"";
+
+        let scalar: Result<Scalar, _> = serde_json::from_str(&length_31_enc);
+        assert!(scalar.is_err());
+    }
+
+    #[test]
+    fn serde_scalar_too_long_encoded() {
+        let length_33_enc =
+            "\"fe9a9c1876745ca351435dec31217662ff1fcf67287de6fd9b6c7de1d0846b2100\"";
+
+        let scalar: Result<Scalar, _> = serde_json::from_str(&length_33_enc);
+        assert!(scalar.is_err());
     }
 }
 
@@ -363,22 +374,6 @@ fn test_iter_prod() {
     let scalars = vec![Scalar::one() + Scalar::one(), Scalar::one() + Scalar::one()];
     let res: Scalar = scalars.iter().product();
     assert_eq!(res, Scalar::from(4u64));
-}
-
-#[test]
-#[cfg(feature = "serde")]
-fn serde_bincode_scalar_roundtrip() {
-    use bincode;
-    let scalar = -Scalar::from(3u64);
-    let encoded = bincode::serialize(&scalar).unwrap();
-    let parsed: Scalar = bincode::deserialize(&encoded).unwrap();
-    assert_eq!(parsed, scalar);
-
-    // Check that the encoding is 32 bytes exactly
-    assert_eq!(encoded.len(), 32);
-
-    // Check that the encoding itself matches the usual one
-    assert_eq!(scalar, bincode::deserialize(&scalar.to_bytes()).unwrap(),);
 }
 
 #[test]
