@@ -11,9 +11,6 @@ use super::{G2Affine, B};
 use crate::fp::Fp;
 use crate::fp2::Fp2;
 
-#[cfg(feature = "serde")]
-use serde::{de::Visitor, Deserialize, Deserializer, Serialize, Serializer};
-
 impl G2Affine {
     /// Raw bytes representation
     ///
@@ -198,66 +195,59 @@ impl Serializable<96> for G2Affine {
 }
 
 #[cfg(feature = "serde")]
-impl Serialize for G2Affine {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        use serde::ser::SerializeTuple;
-        let mut tup = serializer.serialize_tuple(Self::SIZE)?;
-        for byte in <Self as Serializable<96>>::to_bytes(self).iter() {
-            tup.serialize_element(byte)?;
+mod serde_support {
+    use alloc::format;
+    use alloc::string::{String, ToString};
+
+    use serde::de::Error as SerdeError;
+    use serde::{self, Deserialize, Deserializer, Serialize, Serializer};
+
+    use super::*;
+
+    impl Serialize for G2Affine {
+        fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+            let s = hex::encode(self.to_bytes());
+            s.serialize(serializer)
         }
-        tup.end()
     }
-}
 
-#[cfg(feature = "serde")]
-impl<'de> Deserialize<'de> for G2Affine {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        struct G2AffineVisitor;
-
-        impl<'de> Visitor<'de> for G2AffineVisitor {
-            type Value = G2Affine;
-
-            fn expecting(&self, formatter: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-                formatter.write_str("a 48-byte cannonical compressed G2Affine point from Bls12_381")
-            }
-
-            fn visit_seq<A>(self, mut seq: A) -> Result<G2Affine, A::Error>
-            where
-                A: serde::de::SeqAccess<'de>,
-            {
-                let mut bytes = [0u8; G2Affine::SIZE];
-                for i in 0..G2Affine::SIZE {
-                    bytes[i] = seq
-                        .next_element()?
-                        .ok_or(serde::de::Error::invalid_length(i, &"expected 48 bytes"))?;
-                }
-
-                <G2Affine as Serializable<96>>::from_bytes(&bytes).map_err(|_| {
-                    serde::de::Error::custom(&"compressed G2Affine was not canonically encoded")
-                })
-            }
+    impl<'de> Deserialize<'de> for G2Affine {
+        fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+            let s = String::deserialize(deserializer)?;
+            let decoded = hex::decode(&s).map_err(SerdeError::custom)?;
+            let decoded_len = decoded.len();
+            let bytes: [u8; G2Affine::SIZE] = decoded.try_into().map_err(|_| {
+                SerdeError::invalid_length(decoded_len, &G2Affine::SIZE.to_string().as_str())
+            })?;
+            let affine = G2Affine::from_bytes(&bytes)
+                .map_err(|err| SerdeError::custom(format!("{err:?}")))?;
+            Ok(affine)
         }
-
-        deserializer.deserialize_tuple(Self::SIZE, G2AffineVisitor)
     }
-}
 
-#[test]
-#[cfg(feature = "serde")]
-fn g2_affine_serde_roundtrip() {
-    use bincode;
+    #[test]
+    fn serde_g2_affine() {
+        let gen = G2Affine::generator();
+        let ser = serde_json::to_string(&gen).unwrap();
+        let deser: G2Affine = serde_json::from_str(&ser).unwrap();
+        assert_eq!(gen, deser);
+    }
 
-    let gen = G2Affine::generator();
-    let ser = bincode::serialize(&gen).unwrap();
-    let deser: G2Affine = bincode::deserialize(&ser).unwrap();
+    #[test]
+    fn serde_g2_affine_too_short_encoded() {
+        let length_95_enc: &str = "\"93e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bd\"";
 
-    assert_eq!(gen, deser);
+        let g2_affine: Result<G2Affine, _> = serde_json::from_str(&length_95_enc);
+        assert!(g2_affine.is_err());
+    }
+
+    #[test]
+    fn serde_g2_affine_too_long_encoded() {
+        let length_97_enc = "\"93e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb800\"";
+
+        let g2_affine: Result<G2Affine, _> = serde_json::from_str(&length_97_enc);
+        assert!(g2_affine.is_err());
+    }
 }
 
 #[test]

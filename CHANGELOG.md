@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Change serde implementations of `G2Prepared`, `Fp6`, `Fp2`, `Fp`, `G2Affine`, `G1Affine`, `Scalar` [#145]
+
 ## [0.13.0] - 2023-12-13
 
 ### Removed
@@ -230,6 +234,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Rename `S` to `TWO_ADACITY` and export it
 
 <!-- Issues -->
+[#145]: https://github.com/dusk-network/bls12_381/issues/145
 [#137]: https://github.com/dusk-network/bls12_381/issues/137
 [#135]: https://github.com/dusk-network/bls12_381/issues/135
 [#133]: https://github.com/dusk-network/bls12_381/issues/133

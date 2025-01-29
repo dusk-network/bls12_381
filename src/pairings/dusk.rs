@@ -11,13 +11,6 @@ use super::G2Prepared;
 
 use alloc::vec::Vec;
 
-#[cfg(feature = "serde")]
-use serde::{
-    self, de::Visitor, ser::SerializeStruct, Deserialize, Deserializer, Serialize, Serializer,
-};
-#[cfg(feature = "serde")]
-use subtle::Choice;
-
 impl G2Prepared {
     /// Raw bytes representation
     ///
@@ -100,109 +93,82 @@ impl G2Prepared {
 }
 
 #[cfg(feature = "serde")]
-impl Serialize for G2Prepared {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut g2_prepared = serializer.serialize_struct("struct G2Prepared", 2)?;
-        // We encode the choice as an u8 field.
-        g2_prepared.serialize_field("choice", &self.infinity.unwrap_u8())?;
-        // Since we have serde support for `Fp2` we can treat the `Vec` as a
-        // regular field.
-        g2_prepared.serialize_field("coeffs", &self.coeffs)?;
-        g2_prepared.end()
-    }
-}
+mod serde_support {
+    use serde::de::{Error as SerdeError, MapAccess, Visitor};
+    use serde::ser::SerializeStruct;
+    use serde::{self, Deserialize, Deserializer, Serialize, Serializer};
 
-#[cfg(feature = "serde")]
-impl<'de> Deserialize<'de> for G2Prepared {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        enum Field {
-            Choice,
-            Coeffs,
+    use super::*;
+    use crate::dusk::choice::Choice;
+
+    impl Serialize for G2Prepared {
+        fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+            let mut ser_struct = serializer.serialize_struct("G2Prepared", 2)?;
+            ser_struct.serialize_field("infinity", &self.infinity.unwrap_u8())?;
+            ser_struct.serialize_field("coeffs", &self.coeffs)?;
+            ser_struct.end()
         }
+    }
 
-        impl<'de> Deserialize<'de> for Field {
-            fn deserialize<D>(deserializer: D) -> Result<Field, D::Error>
-            where
-                D: Deserializer<'de>,
-            {
-                struct FieldVisitor;
+    impl<'de> Deserialize<'de> for G2Prepared {
+        fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+            struct G2PreparedVisitor;
 
-                impl<'de> Visitor<'de> for FieldVisitor {
-                    type Value = Field;
+            const FIELDS: &[&str] = &["infinity", "coeffs"];
 
-                    fn expecting(
-                        &self,
-                        formatter: &mut ::core::fmt::Formatter,
-                    ) -> ::core::fmt::Result {
-                        formatter.write_str("struct G2Prepared")
-                    }
+            impl<'de> Visitor<'de> for G2PreparedVisitor {
+                type Value = G2Prepared;
 
-                    fn visit_str<E>(self, value: &str) -> Result<Field, E>
-                    where
-                        E: serde::de::Error,
-                    {
-                        match value {
-                            "choice" => Ok(Field::Choice),
-                            "coeffs" => Ok(Field::Coeffs),
-                            _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
-                        }
-                    }
+                fn expecting(&self, formatter: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+                    formatter.write_str("a struct a with fields infinity and coeffs")
                 }
 
-                deserializer.deserialize_identifier(FieldVisitor)
+                fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<Self::Value, A::Error> {
+                    let mut infinity: Option<u8> = None;
+                    let mut coeffs = None;
+                    while let Some(key) = map.next_key()? {
+                        match key {
+                            "infinity" => {
+                                if infinity.is_some() {
+                                    return Err(SerdeError::duplicate_field("infinity"));
+                                } else {
+                                    infinity = Some(map.next_value()?);
+                                }
+                            }
+                            "coeffs" => {
+                                if coeffs.is_some() {
+                                    return Err(SerdeError::duplicate_field("coeffs"));
+                                } else {
+                                    coeffs = Some(map.next_value()?);
+                                }
+                            }
+                            field => return Err(SerdeError::unknown_field(field, &FIELDS)),
+                        }
+                    }
+                    Ok(G2Prepared {
+                        infinity: Choice::from(
+                            infinity.ok_or_else(|| SerdeError::missing_field("infinity"))?,
+                        ),
+                        coeffs: coeffs.ok_or_else(|| SerdeError::missing_field("coeffs"))?,
+                    })
+                }
             }
+
+            deserializer.deserialize_struct("G2Prepared", FIELDS, G2PreparedVisitor)
         }
-
-        struct G2PreparedVisitor;
-
-        impl<'de> Visitor<'de> for G2PreparedVisitor {
-            type Value = G2Prepared;
-
-            fn expecting(&self, formatter: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-                formatter.write_str("struct G2Prepared")
-            }
-
-            fn visit_seq<V>(self, mut seq: V) -> Result<G2Prepared, V::Error>
-            where
-                V: serde::de::SeqAccess<'de>,
-            {
-                let choice_as_u8: u8 = seq
-                    .next_element()?
-                    .ok_or_else(|| serde::de::Error::invalid_length(0, &self))?;
-                let coeffs = seq
-                    .next_element()?
-                    .ok_or_else(|| serde::de::Error::invalid_length(0, &self))?;
-                let choice: Choice = Choice::from(choice_as_u8);
-                Ok(G2Prepared {
-                    infinity: choice.into(),
-                    coeffs,
-                })
-            }
-        }
-
-        const FIELDS: &[&str] = &["choice", "coeffs"];
-        deserializer.deserialize_struct("G2Prepared", FIELDS, G2PreparedVisitor)
     }
-}
 
-#[test]
-#[cfg(feature = "serde")]
-fn g2_prepared_serde_roundtrip() {
-    use crate::G2Affine;
-    use bincode;
+    #[test]
+    fn serde_g2_prepared() {
+        use crate::G2Affine;
 
-    let g2_prepared = G2Prepared::from(G2Affine::generator());
-    let ser = bincode::serialize(&g2_prepared).unwrap();
-    let deser: G2Prepared = bincode::deserialize(&ser).unwrap();
+        let g2_prepared = G2Prepared::from(G2Affine::generator());
+        let ser = serde_json::to_string(&g2_prepared).unwrap();
+        let deser: G2Prepared = serde_json::from_str(&ser).unwrap();
 
-    assert_eq!(g2_prepared.coeffs, deser.coeffs);
-    assert_eq!(g2_prepared.infinity.unwrap_u8(), deser.infinity.unwrap_u8())
+        assert_eq!(g2_prepared.coeffs, deser.coeffs);
+        assert_eq!(g2_prepared.infinity.unwrap_u8(), deser.infinity.unwrap_u8());
+    }
 }
 
 #[test]

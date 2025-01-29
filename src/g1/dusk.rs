@@ -10,9 +10,6 @@ use subtle::{Choice, ConditionallySelectable, CtOption};
 use super::{G1Affine, B};
 use crate::fp::Fp;
 
-#[cfg(feature = "serde")]
-use serde::{de::Visitor, Deserialize, Deserializer, Serialize, Serializer};
-
 impl G1Affine {
     /// Bytes size of the raw representation
     pub const RAW_SIZE: usize = 97;
@@ -169,66 +166,59 @@ impl Serializable<48> for G1Affine {
 }
 
 #[cfg(feature = "serde")]
-impl Serialize for G1Affine {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        use serde::ser::SerializeTuple;
-        let mut tup = serializer.serialize_tuple(G1Affine::SIZE)?;
-        for byte in <Self as Serializable<48>>::to_bytes(self).iter() {
-            tup.serialize_element(byte)?;
+mod serde_support {
+    use alloc::format;
+    use alloc::string::{String, ToString};
+
+    use serde::de::Error as SerdeError;
+    use serde::{self, Deserialize, Deserializer, Serialize, Serializer};
+
+    use super::*;
+
+    impl Serialize for G1Affine {
+        fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+            let s = hex::encode(self.to_bytes());
+            s.serialize(serializer)
         }
-        tup.end()
     }
-}
 
-#[cfg(feature = "serde")]
-impl<'de> Deserialize<'de> for G1Affine {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        struct G1AffineVisitor;
-
-        impl<'de> Visitor<'de> for G1AffineVisitor {
-            type Value = G1Affine;
-
-            fn expecting(&self, formatter: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-                formatter.write_str("a 48-byte cannonical compressed G1Affine point from Bls12_381")
-            }
-
-            fn visit_seq<A>(self, mut seq: A) -> Result<G1Affine, A::Error>
-            where
-                A: serde::de::SeqAccess<'de>,
-            {
-                let mut bytes = [0u8; G1Affine::SIZE];
-                for i in 0..G1Affine::SIZE {
-                    bytes[i] = seq
-                        .next_element()?
-                        .ok_or(serde::de::Error::invalid_length(i, &"expected 48 bytes"))?;
-                }
-
-                <G1Affine as Serializable<48>>::from_bytes(&bytes).map_err(|_| {
-                    serde::de::Error::custom(&"compressed G1Affine was not canonically encoded")
-                })
-            }
+    impl<'de> Deserialize<'de> for G1Affine {
+        fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+            let s = String::deserialize(deserializer)?;
+            let decoded = hex::decode(&s).map_err(SerdeError::custom)?;
+            let decoded_len = decoded.len();
+            let bytes: [u8; G1Affine::SIZE] = decoded.try_into().map_err(|_| {
+                SerdeError::invalid_length(decoded_len, &G1Affine::SIZE.to_string().as_str())
+            })?;
+            let affine = G1Affine::from_bytes(&bytes)
+                .map_err(|err| SerdeError::custom(format!("{err:?}")))?;
+            Ok(affine)
         }
-
-        deserializer.deserialize_tuple(G1Affine::SIZE, G1AffineVisitor)
     }
-}
 
-#[test]
-#[cfg(feature = "serde")]
-fn g1_affine_serde_roundtrip() {
-    use bincode;
+    #[test]
+    fn serde_g1_affine() {
+        let gen = G1Affine::generator();
+        let ser = serde_json::to_string(&gen).unwrap();
+        let deser: G1Affine = serde_json::from_str(&ser).unwrap();
+        assert_eq!(gen, deser);
+    }
 
-    let gen = G1Affine::generator();
-    let ser = bincode::serialize(&gen).unwrap();
-    let deser: G1Affine = bincode::deserialize(&ser).unwrap();
+    #[test]
+    fn serde_g1_affine_too_short_encoded() {
+        let length_47_enc = "\"97f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6\"";
 
-    assert_eq!(gen, deser);
+        let g1_affine: Result<G1Affine, _> = serde_json::from_str(&length_47_enc);
+        assert!(g1_affine.is_err());
+    }
+
+    #[test]
+    fn serde_g1_affine_too_long_encoded() {
+        let length_49_enc = "\"97f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb00\"";
+
+        let g1_affine: Result<G1Affine, _> = serde_json::from_str(&length_49_enc);
+        assert!(g1_affine.is_err());
+    }
 }
 
 #[test]
