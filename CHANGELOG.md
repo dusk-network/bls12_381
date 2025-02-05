@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add `extern crate alloc` declaration in serde modules that use the alloc crate [#148]
+
 ## [0.14.0] - 2025-01-29
 
 ### Changed
@@ -236,6 +240,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Rename `S` to `TWO_ADACITY` and export it
 
 <!-- Issues -->
+[#148]: https://github.com/dusk-network/bls12_381/issues/148
 [#145]: https://github.com/dusk-network/bls12_381/issues/145
 [#137]: https://github.com/dusk-network/bls12_381/issues/137
 [#135]: https://github.com/dusk-network/bls12_381/issues/135
