@@ -196,6 +196,8 @@ impl Serializable<96> for G2Affine {
 
 #[cfg(feature = "serde")]
 mod serde_support {
+    extern crate alloc;
+
     use alloc::format;
     use alloc::string::{String, ToString};
 

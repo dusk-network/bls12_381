@@ -91,6 +91,8 @@ impl Serializable<32> for Scalar {
 
 #[cfg(feature = "serde")]
 mod serde_support {
+    extern crate alloc;
+
     use alloc::string::{String, ToString};
 
     use serde::de::Error as SerdeError;
