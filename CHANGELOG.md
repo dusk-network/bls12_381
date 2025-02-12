@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add `to_be_bytes` to scalar [#151]
+
 ## [0.14.1] - 2025-02-05
 
 ### Added
@@ -242,6 +246,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Rename `S` to `TWO_ADACITY` and export it
 
 <!-- Issues -->
+[#151]: https://github.com/dusk-network/bls12_381/issues/151
 [#148]: https://github.com/dusk-network/bls12_381/issues/148
 [#145]: https://github.com/dusk-network/bls12_381/issues/145
 [#137]: https://github.com/dusk-network/bls12_381/issues/137

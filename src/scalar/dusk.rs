@@ -254,6 +254,22 @@ impl Scalar {
         res
     }
 
+    /// Converts an element of `Scalar` into a byte representation in
+    /// big-endian byte order.
+    fn to_be_bytes(&self) -> [u8; Self::SIZE] {
+        // Turn into canonical form by computing
+        // (a.R) / R = a
+        let tmp = self.reduce();
+
+        let mut res = [0; Self::SIZE];
+        res[0..8].copy_from_slice(&tmp.0[3].to_be_bytes());
+        res[8..16].copy_from_slice(&tmp.0[2].to_be_bytes());
+        res[16..24].copy_from_slice(&tmp.0[1].to_be_bytes());
+        res[24..32].copy_from_slice(&tmp.0[0].to_be_bytes());
+
+        res
+    }
+
     /// Reduces the scalar and returns it multiplied by the montgomery
     /// radix.
     pub fn reduce(&self) -> Scalar {
@@ -445,6 +461,41 @@ fn test_scalar_eq_and_hash() {
     // Check if hash results are consistent with PartialEq results
     assert_eq!(hash_r0, hash_r1);
     assert_ne!(hash_r0, hash_r2);
+}
+
+#[test]
+fn test_to_be_bytes() {
+    assert_eq!(
+        Scalar::zero().to_be_bytes(),
+        [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0
+        ]
+    );
+
+    assert_eq!(
+        Scalar::one().to_be_bytes(),
+        [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 1
+        ]
+    );
+
+    assert_eq!(
+        R2.to_be_bytes(),
+        [
+            24, 36, 177, 89, 172, 197, 5, 111, 153, 140, 79, 239, 236, 188, 79, 245, 88, 132, 183,
+            250, 0, 3, 72, 2, 0, 0, 0, 1, 255, 255, 255, 254
+        ]
+    );
+
+    assert_eq!(
+        (-&Scalar::one()).to_be_bytes(),
+        [
+            115, 237, 167, 83, 41, 157, 125, 72, 51, 57, 216, 8, 9, 161, 216, 5, 83, 189, 164, 2,
+            255, 254, 91, 254, 255, 255, 255, 255, 0, 0, 0, 0
+        ]
+    );
 }
 
 #[cfg(all(test, feature = "alloc"))]
