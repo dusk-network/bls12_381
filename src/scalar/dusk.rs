@@ -40,17 +40,7 @@ impl Serializable<32> for Scalar {
     /// Converts an element of `Scalar` into a byte representation in
     /// little-endian byte order.
     fn to_bytes(&self) -> [u8; Self::SIZE] {
-        // Turn into canonical form by computing
-        // (a.R) / R = a
-        let tmp = Scalar::montgomery_reduce(self.0[0], self.0[1], self.0[2], self.0[3], 0, 0, 0, 0);
-
-        let mut res = [0; Self::SIZE];
-        res[0..8].copy_from_slice(&tmp.0[0].to_le_bytes());
-        res[8..16].copy_from_slice(&tmp.0[1].to_le_bytes());
-        res[16..24].copy_from_slice(&tmp.0[2].to_le_bytes());
-        res[24..32].copy_from_slice(&tmp.0[3].to_le_bytes());
-
-        res
+        self.to_bytes()
     }
 
     /// Attempts to convert a little-endian byte representation of
