@@ -11,8 +11,7 @@ use core::ops::{BitAnd, BitXor};
 use dusk_bytes::{Error as BytesError, Serializable};
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq};
 
-use super::{Scalar, MODULUS, R2};
-use crate::util::sbb;
+use super::{Scalar, R2};
 
 impl PartialOrd for Scalar {
     fn partial_cmp(&self, other: &Scalar) -> Option<Ordering> {
@@ -46,36 +45,9 @@ impl Serializable<32> for Scalar {
     /// Attempts to convert a little-endian byte representation of
     /// a scalar into a `Scalar`, failing if the input is not canonical.
     fn from_bytes(buf: &[u8; Self::SIZE]) -> Result<Self, Self::Error> {
-        let mut s = [0u64; 4];
-
-        s.iter_mut()
-            .zip(buf.chunks_exact(8))
-            .try_for_each(|(s, b)| {
-                <[u8; 8]>::try_from(b)
-                    .map(|b| *s = u64::from_le_bytes(b))
-                    .map_err(|_| BytesError::InvalidData)
-            })?;
-
-        // Try to subtract the modulus
-        let (_, borrow) = sbb(s[0], MODULUS.0[0], 0);
-        let (_, borrow) = sbb(s[1], MODULUS.0[1], borrow);
-        let (_, borrow) = sbb(s[2], MODULUS.0[2], borrow);
-        let (_, borrow) = sbb(s[3], MODULUS.0[3], borrow);
-
-        // If the element is smaller than MODULUS then the
-        // subtraction will underflow, producing a borrow value
-        // of 0xffff...ffff. Otherwise, it'll be zero.
-        if (borrow as u8) & 1 != 1 {
-            return Err(BytesError::InvalidData);
-        }
-
-        let mut s = Scalar(s);
-
-        // Convert to Montgomery form by computing
-        // (a.R^0 * R^2) / R = a.R
-        s *= &R2;
-
-        Ok(s)
+        Self::from_bytes(buf)
+            .into_option()
+            .ok_or(BytesError::InvalidData)
     }
 }
 
