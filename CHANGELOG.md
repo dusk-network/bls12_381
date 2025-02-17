@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.2] - 2025-02-17
+
 ### Added
 
 - Add `to_be_bytes` to scalar [#151]
@@ -279,7 +281,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [#50]: https://github.com/dusk-network/bls12_381/issues/50
 
 <!-- Versions -->
-[Unreleased]: https://github.com/dusk-network/bls12_381/compare/v0.14.1...HEAD
+[Unreleased]: https://github.com/dusk-network/bls12_381/compare/v0.14.2...HEAD
+[0.14.1]: https://github.com/dusk-network/bls12_381/compare/v0.14.1...v0.14.2
 [0.14.1]: https://github.com/dusk-network/bls12_381/compare/v0.14.0...v0.14.1
 [0.14.0]: https://github.com/dusk-network/bls12_381/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/dusk-network/bls12_381/compare/v0.12.3...v0.13.0
