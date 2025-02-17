@@ -256,7 +256,7 @@ impl Scalar {
 
     /// Converts an element of `Scalar` into a byte representation in
     /// big-endian byte order.
-    fn to_be_bytes(&self) -> [u8; Self::SIZE] {
+    pub fn to_be_bytes(&self) -> [u8; Self::SIZE] {
         // Turn into canonical form by computing
         // (a.R) / R = a
         let tmp = self.reduce();
