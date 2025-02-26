@@ -227,28 +227,40 @@ mod serde_support {
         }
     }
 
-    #[test]
-    fn serde_g2_affine() {
-        let gen = G2Affine::generator();
-        let ser = serde_json::to_string(&gen).unwrap();
-        let deser: G2Affine = serde_json::from_str(&ser).unwrap();
-        assert_eq!(gen, deser);
-    }
+    #[cfg(test)]
+    mod tests {
+        use alloc::boxed::Box;
 
-    #[test]
-    fn serde_g2_affine_too_short_encoded() {
-        let length_95_enc: &str = "\"93e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bd\"";
+        use super::*;
+        use crate::dusk::test_utils;
 
-        let g2_affine: Result<G2Affine, _> = serde_json::from_str(&length_95_enc);
-        assert!(g2_affine.is_err());
-    }
+        #[test]
+        fn serde_g2_affine() -> Result<(), Box<dyn std::error::Error>> {
+            let gen = G2Affine::generator();
+            let ser = test_utils::assert_canonical_json(
+                &gen,
+                "\"93e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb8\""
+            )?;
+            let deser: G2Affine = serde_json::from_str(&ser).unwrap();
+            assert_eq!(gen, deser);
+            Ok(())
+        }
 
-    #[test]
-    fn serde_g2_affine_too_long_encoded() {
-        let length_97_enc = "\"93e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb800\"";
+        #[test]
+        fn serde_g2_affine_too_short_encoded() {
+            let length_95_enc: &str = "\"93e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bd\"";
 
-        let g2_affine: Result<G2Affine, _> = serde_json::from_str(&length_97_enc);
-        assert!(g2_affine.is_err());
+            let g2_affine: Result<G2Affine, _> = serde_json::from_str(&length_95_enc);
+            assert!(g2_affine.is_err());
+        }
+
+        #[test]
+        fn serde_g2_affine_too_long_encoded() {
+            let length_97_enc = "\"93e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb800\"";
+
+            let g2_affine: Result<G2Affine, _> = serde_json::from_str(&length_97_enc);
+            assert!(g2_affine.is_err());
+        }
     }
 }
 

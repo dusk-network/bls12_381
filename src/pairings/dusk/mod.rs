@@ -158,16 +158,27 @@ mod serde_support {
         }
     }
 
-    #[test]
-    fn serde_g2_prepared() {
+    #[cfg(test)]
+    mod tests {
+        use alloc::boxed::Box;
+
+        use super::*;
+        use crate::dusk::test_utils;
         use crate::G2Affine;
 
-        let g2_prepared = G2Prepared::from(G2Affine::generator());
-        let ser = serde_json::to_string(&g2_prepared).unwrap();
-        let deser: G2Prepared = serde_json::from_str(&ser).unwrap();
+        #[test]
+        fn serde_g2_prepared() -> Result<(), Box<dyn std::error::Error>> {
+            let g2_prepared = G2Prepared::from(G2Affine::generator());
+            let ser = test_utils::assert_canonical_json(
+                &g2_prepared,
+                include_str!("./g2_prepared.json"),
+            )?;
+            let deser: G2Prepared = serde_json::from_str(&ser).unwrap();
 
-        assert_eq!(g2_prepared.coeffs, deser.coeffs);
-        assert_eq!(g2_prepared.infinity.unwrap_u8(), deser.infinity.unwrap_u8());
+            assert_eq!(g2_prepared.coeffs, deser.coeffs);
+            assert_eq!(g2_prepared.infinity.unwrap_u8(), deser.infinity.unwrap_u8());
+            Ok(())
+        }
     }
 }
 
