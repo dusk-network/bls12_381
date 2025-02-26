@@ -93,6 +93,7 @@ optional = true
 
 [dependencies.serde]
 version = "1"
+default-features = false
 optional = true
 
 [dependencies.rkyv]
@@ -110,6 +111,7 @@ version = "0.1"
 
 [dependencies.hex]
 version = "0.4"
+default-features = false
 optional = true
 # End
 
@@ -124,4 +126,4 @@ nightly = ["subtle/nightly"]
 # Features added by Dusk
 parallel = ["rayon"]
 rkyv-impl = ["rkyv", "rkyv/alloc", "bytecheck"]
-serde = ["dep:serde", "hex"]
+serde = ["dep:serde", "hex/alloc"]
