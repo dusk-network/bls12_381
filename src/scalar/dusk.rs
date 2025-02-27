@@ -86,35 +86,48 @@ mod serde_support {
         }
     }
 
-    #[test]
-    fn serde_scalar() {
+    #[cfg(test)]
+    mod tests {
+        use alloc::boxed::Box;
+
         use ff::Field;
         use rand::rngs::StdRng;
         use rand_core::SeedableRng;
 
-        let mut rng = StdRng::seed_from_u64(0xc0b);
-        let scalar = Scalar::random(&mut rng);
-        let ser = serde_json::to_string(&scalar).unwrap();
-        let deser = serde_json::from_str(&ser).unwrap();
+        use super::*;
+        use crate::dusk::test_utils;
 
-        assert_eq!(scalar, deser);
-    }
+        #[test]
+        fn serde_scalar() -> Result<(), Box<dyn std::error::Error>> {
+            let mut rng = StdRng::seed_from_u64(0xc0b);
+            let scalar = Scalar::random(&mut rng);
+            let ser = test_utils::assert_canonical_json(
+                &scalar,
+                "\"fe9a9c1876745ca351435dec31217662ff1fcf67287de6fd9b6c7de1d0846b21\"",
+            )?;
+            let deser = serde_json::from_str(&ser).unwrap();
 
-    #[test]
-    fn serde_scalar_too_short_encoded() {
-        let length_31_enc = "\"fe9a9c1876745ca351435dec31217662ff1fcf67287de6fd9b6c7de1d0846b\"";
+            assert_eq!(scalar, deser);
+            Ok(())
+        }
 
-        let scalar: Result<Scalar, _> = serde_json::from_str(&length_31_enc);
-        assert!(scalar.is_err());
-    }
+        #[test]
+        fn serde_scalar_too_short_encoded() {
+            let length_31_enc =
+                "\"fe9a9c1876745ca351435dec31217662ff1fcf67287de6fd9b6c7de1d0846b\"";
 
-    #[test]
-    fn serde_scalar_too_long_encoded() {
-        let length_33_enc =
-            "\"fe9a9c1876745ca351435dec31217662ff1fcf67287de6fd9b6c7de1d0846b2100\"";
+            let scalar: Result<Scalar, _> = serde_json::from_str(&length_31_enc);
+            assert!(scalar.is_err());
+        }
 
-        let scalar: Result<Scalar, _> = serde_json::from_str(&length_33_enc);
-        assert!(scalar.is_err());
+        #[test]
+        fn serde_scalar_too_long_encoded() {
+            let length_33_enc =
+                "\"fe9a9c1876745ca351435dec31217662ff1fcf67287de6fd9b6c7de1d0846b2100\"";
+
+            let scalar: Result<Scalar, _> = serde_json::from_str(&length_33_enc);
+            assert!(scalar.is_err());
+        }
     }
 }
 

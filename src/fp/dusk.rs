@@ -53,31 +53,43 @@ mod serde_support {
         }
     }
 
-    #[test]
-    fn serde_fp() {
+    #[cfg(test)]
+    mod tests {
+        use alloc::boxed::Box;
+
         use rand::rngs::StdRng;
         use rand_core::SeedableRng;
 
-        let mut rng = StdRng::seed_from_u64(0xc0b);
-        let fp = Fp::random(&mut rng);
-        let ser = serde_json::to_string(&fp).unwrap();
-        let deser: Fp = serde_json::from_str(&ser).unwrap();
-        assert_eq!(fp, deser);
-    }
+        use super::*;
+        use crate::dusk::test_utils;
 
-    #[test]
-    fn serde_fp_too_short_encoded() {
-        let length_47_enc = "\"16e40954bea69030cc133b0597126df8d4d35ed26e4ed93346dcbdc306e2e92039a0d32ccd21176819a26cb9430335\"";
+        #[test]
+        fn serde_fp() -> Result<(), Box<dyn std::error::Error>> {
+            let mut rng = StdRng::seed_from_u64(0xc0b);
+            let fp = Fp::random(&mut rng);
+            let ser = test_utils::assert_canonical_json(
+                &fp,
+                "\"16e40954bea69030cc133b0597126df8d4d35ed26e4ed93346dcbdc306e2e92039a0d32ccd21176819a26cb9430335f2\""
+            )?;
+            let deser: Fp = serde_json::from_str(&ser).unwrap();
+            assert_eq!(fp, deser);
+            Ok(())
+        }
 
-        let fp: Result<Fp, _> = serde_json::from_str(&length_47_enc);
-        assert!(fp.is_err());
-    }
+        #[test]
+        fn serde_fp_too_short_encoded() {
+            let length_47_enc = "\"16e40954bea69030cc133b0597126df8d4d35ed26e4ed93346dcbdc306e2e92039a0d32ccd21176819a26cb9430335\"";
 
-    #[test]
-    fn serde_fp_too_long_encoded() {
-        let length_49_enc = "\"16e40954bea69030cc133b0597126df8d4d35ed26e4ed93346dcbdc306e2e92039a0d32ccd21176819a26cb9430335f200\"";
+            let fp: Result<Fp, _> = serde_json::from_str(&length_47_enc);
+            assert!(fp.is_err());
+        }
 
-        let fp: Result<Fp, _> = serde_json::from_str(&length_49_enc);
-        assert!(fp.is_err());
+        #[test]
+        fn serde_fp_too_long_encoded() {
+            let length_49_enc = "\"16e40954bea69030cc133b0597126df8d4d35ed26e4ed93346dcbdc306e2e92039a0d32ccd21176819a26cb9430335f200\"";
+
+            let fp: Result<Fp, _> = serde_json::from_str(&length_49_enc);
+            assert!(fp.is_err());
+        }
     }
 }
