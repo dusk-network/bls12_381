@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Serde feature no longer has any std dependence [#3596]
+
 ## [0.14.2] - 2025-02-17
 
 ### Added
@@ -252,6 +256,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Rename `S` to `TWO_ADACITY` and export it
 
 <!-- Issues -->
+[#3596]: https://github.com/dusk-network/rusk/issues/3596
 [#154]: https://github.com/dusk-network/bls12_381/issues/154
 [#151]: https://github.com/dusk-network/bls12_381/issues/151
 [#148]: https://github.com/dusk-network/bls12_381/issues/148
