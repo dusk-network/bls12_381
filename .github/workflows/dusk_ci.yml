@@ -15,14 +15,14 @@ jobs:
       - uses: dsherret/rust-toolchain-file@v1
       - run: cargo fmt --all -- --check
 
-  test_nightly_std:
-    name: Nightly tests std
+  test_stable_std:
+    name: Stable tests std
     uses: dusk-network/.github/.github/workflows/run-tests.yml@main
     with:
       test_flags: --all-features
 
-  test_nightly_no_std:
-    name: Nightly tests no_std
+  test_stable_no_std:
+    name: Stable tests no_std
     uses: dusk-network/.github/.github/workflows/run-tests.yml@main
     with:
       test_flags: --no-default-features
