@@ -1,0 +1,5 @@
+unstable_features = true
+# group_imports = "StdExternalCrate"  # disabled: zkcrypto fork
+# imports_granularity = "Module"      # disabled: zkcrypto fork
+# wrap_comments = true               # disabled: mangles aligned math in fp6.rs
+use_field_init_shorthand = true
