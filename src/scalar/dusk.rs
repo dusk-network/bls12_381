@@ -13,6 +13,17 @@ use subtle::{Choice, ConditionallySelectable, ConstantTimeEq};
 
 use super::{Scalar, R2};
 
+/// Orders scalars by comparing their internal Montgomery-form limbs
+/// lexicographically (most-significant limb first).
+///
+/// **This ordering has no relationship to the mathematical value of the
+/// scalar.** Montgomery representation multiplies the canonical value by a
+/// factor of R (mod p), so two scalars that are adjacent in field-element
+/// order may be far apart under this ordering and vice-versa.
+///
+/// The ordering is a consistent total order, which makes it suitable for
+/// data structures that require `Ord` (e.g. `BTreeSet`), but it must not
+/// be used for mathematical comparisons.
 impl PartialOrd for Scalar {
     fn partial_cmp(&self, other: &Scalar) -> Option<Ordering> {
         Some(self.cmp(other))
