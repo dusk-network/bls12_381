@@ -56,9 +56,7 @@ impl Serializable<32> for Scalar {
     /// Attempts to convert a little-endian byte representation of
     /// a scalar into a `Scalar`, failing if the input is not canonical.
     fn from_bytes(buf: &[u8; Self::SIZE]) -> Result<Self, Self::Error> {
-        Self::from_bytes(buf)
-            .into_option()
-            .ok_or(BytesError::InvalidData)
+        Option::from(Self::from_bytes(buf)).ok_or(BytesError::InvalidData)
     }
 }
 
@@ -88,11 +86,9 @@ mod serde_support {
             let bytes: [u8; Scalar::SIZE] = decoded.try_into().map_err(|_| {
                 SerdeError::invalid_length(decoded_len, &Scalar::SIZE.to_string().as_str())
             })?;
-            let scalar = Scalar::from_bytes(&bytes)
-                .into_option()
-                .ok_or(SerdeError::custom(
-                    "Failed to deserialize Scalar: invalid Scalar",
-                ))?;
+            let scalar = Option::from(Scalar::from_bytes(&bytes)).ok_or(SerdeError::custom(
+                "Failed to deserialize Scalar: invalid Scalar",
+            ))?;
             Ok(scalar)
         }
     }
