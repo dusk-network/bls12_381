@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Replace removed `CtOption::into_option` with `Option::from`
+
 ### Changed
 
 - Serde feature no longer has any std dependence [#3596]
@@ -97,33 +101,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Fixed `rkyv-impl` feature by bringing in `rkyv/alloc` on `alloc` feature
-- Make `g1` and `g2` `Archived*` structs only available on `rkyv-impl` 
+- Make `g1` and `g2` `Archived*` structs only available on `rkyv-impl`
 
 ## [0.11.1] - 2022-10-19
 
 ### Added
+
 - Add support for `rkyv-impl` under `no_std`
 - Add wrapper type for `subtle::Choice`
 
 ### Change
+
 - Derive manual implementations of `rkyv` trait by introducing a wrapper for the
   `subtle::Choice` type
 
 ## [0.11.0] - 2022-08-17
 
 ### Added
+
 - Add `rkyv-impl` feature
 - Add implementation of `CheckBytes`
 
 ### Change
+
 - Move `rkyv`-related implementations behind the `rkyv-impl` feature
 
 ### Remove
+
 - `Sized` bound from `G2Prepared` `rkyv::Serialize` implementation [#94]
 
 ## [0.10.1] - 2022-07-27
 
 ### Added
+
 - `rkyv` implementation behind feature gate [#90]
 - Derive `Hash` for `BlsScalar`
 - Apply patches from `zkcrypto` to improve the efficiency [#86]
@@ -131,14 +141,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.10.0] - 2022-05-25
 
 ### Changed
+
 - Change `invert` Scalar function signature [#78]
 
 ### Added
+
 - Add `invert_ct` constant time Scalar inversion calculation [#78]
 
 ## [0.9.0] - 2022-02-24
 
 ### Changed
+
 - Update canonical and canonical_derive to v0.7
 - Update rust edition to 2021
 
@@ -287,7 +300,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- Versions -->
 [Unreleased]: https://github.com/dusk-network/bls12_381/compare/v0.14.2...HEAD
-[0.14.1]: https://github.com/dusk-network/bls12_381/compare/v0.14.1...v0.14.2
+[0.14.2]: https://github.com/dusk-network/bls12_381/compare/v0.14.1...v0.14.2
 [0.14.1]: https://github.com/dusk-network/bls12_381/compare/v0.14.0...v0.14.1
 [0.14.0]: https://github.com/dusk-network/bls12_381/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/dusk-network/bls12_381/compare/v0.12.3...v0.13.0
@@ -314,5 +327,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.1.5]: https://github.com/dusk-network/bls12_381/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/dusk-network/bls12_381/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/dusk-network/bls12_381/compare/v0.1.2...v0.1.3
-[0.1.2]: https://github.com/dusk-network/bls12_381/compare/v0.1.1...v0.1.2
-[0.1.1]: https://github.com/dusk-network/bls12_381/releases/tag/v0.1.1
+[0.1.2]: https://github.com/dusk-network/bls12_381/releases/tag/v0.1.2

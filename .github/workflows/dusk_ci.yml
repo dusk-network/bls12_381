@@ -15,23 +15,18 @@ jobs:
       - uses: dsherret/rust-toolchain-file@v1
       - run: cargo fmt --all -- --check
 
-  test_stable_std:
-    name: Stable tests std
-    uses: dusk-network/.github/.github/workflows/run-tests.yml@main
-    with:
-      test_flags: --all-features
-
-  test_stable_no_std:
-    name: Stable tests no_std
-    uses: dusk-network/.github/.github/workflows/run-tests.yml@main
-    with:
-      test_flags: --no-default-features
-
-  compiles_to_wasm_with_serde:
-    name: Compiles to wasm with serde enabled
+  test:
+    name: Tests
     runs-on: core
     steps:
       - uses: actions/checkout@v4
       - uses: dsherret/rust-toolchain-file@v1
-      - run: rustup target add wasm32-unknown-unknown
-      - run: cargo b --release --no-default-features --features serde --target wasm32-unknown-unknown
+      - run: make test
+
+  no-std:
+    name: no_std + WASM
+    runs-on: core
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dsherret/rust-toolchain-file@v1
+      - run: make no-std

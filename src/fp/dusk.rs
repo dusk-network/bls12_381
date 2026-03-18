@@ -46,8 +46,7 @@ mod serde_support {
             let bytes: [u8; FP_BYTES_LEN] = decoded.try_into().map_err(|_| {
                 SerdeError::invalid_length(decoded_len, &FP_BYTES_LEN.to_string().as_str())
             })?;
-            let fp = Fp::from_bytes(&bytes)
-                .into_option()
+            let fp = Option::from(Fp::from_bytes(&bytes))
                 .ok_or(SerdeError::custom("Failed to deserialize Fp: invalid Fp"))?;
             Ok(fp)
         }
