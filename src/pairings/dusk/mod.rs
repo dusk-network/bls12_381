@@ -142,7 +142,7 @@ mod serde_support {
                                     coeffs = Some(map.next_value()?);
                                 }
                             }
-                            field => return Err(SerdeError::unknown_field(field, &FIELDS)),
+                            field => return Err(SerdeError::unknown_field(field, FIELDS)),
                         }
                     }
                     Ok(G2Prepared {

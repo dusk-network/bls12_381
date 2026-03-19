@@ -1,3 +1,4 @@
+#![allow(clippy::needless_lifetimes, unused_attributes)]
 #[cfg(all(feature = "alloc", feature = "pairing"))]
 mod dusk;
 

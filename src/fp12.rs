@@ -1,3 +1,4 @@
+#![allow(clippy::needless_lifetimes)]
 use crate::fp::*;
 use crate::fp2::*;
 use crate::fp6::*;

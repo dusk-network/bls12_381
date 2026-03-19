@@ -1,3 +1,4 @@
+#![allow(clippy::needless_lifetimes)]
 #[cfg(feature = "serde")]
 mod dusk;
 

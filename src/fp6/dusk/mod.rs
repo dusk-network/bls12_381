@@ -65,7 +65,7 @@ mod serde_support {
                                     c2 = Some(map.next_value()?);
                                 }
                             }
-                            field => return Err(SerdeError::unknown_field(field, &FIELDS)),
+                            field => return Err(SerdeError::unknown_field(field, FIELDS)),
                         }
                     }
                     Ok(Fp6 {

@@ -11,7 +11,7 @@ use core::ops::{BitAnd, BitXor};
 use dusk_bytes::{Error as BytesError, Serializable};
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq};
 
-use super::{Scalar, R2};
+use super::Scalar;
 
 /// Orders scalars by comparing their internal Montgomery-form limbs
 /// lexicographically (most-significant limb first).
@@ -154,7 +154,7 @@ pub const GEN_Y: Scalar = Scalar([
     0xCD482CC3FD6FF4D,
 ]);
 
-impl<'a, 'b> BitXor<&'b Scalar> for &'a Scalar {
+impl<'b> BitXor<&'b Scalar> for &Scalar {
     type Output = Scalar;
 
     fn bitxor(self, rhs: &'b Scalar) -> Scalar {
@@ -185,7 +185,7 @@ impl BitAnd<Scalar> for Scalar {
     }
 }
 
-impl<'a, 'b> BitAnd<&'b Scalar> for &'a Scalar {
+impl<'b> BitAnd<&'b Scalar> for &Scalar {
     type Output = Scalar;
 
     fn bitand(self, rhs: &'b Scalar) -> Scalar {
@@ -278,7 +278,7 @@ impl Scalar {
     ///
     /// By treating the output of the BLAKE2b hash as a random oracle, this
     /// implementation follows the first conversion of
-    /// https://hackmd.io/zV6qe1_oSU-kYU6Tt7pO7Q with concrete numbers:
+    /// <https://hackmd.io/zV6qe1_oSU-kYU6Tt7pO7Q> with concrete numbers:
     /// ```text
     /// p = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001
     /// p = 52435875175126190479447740508185965837690552500527637822603658699938581184513
@@ -339,170 +339,177 @@ impl Scalar {
     }
 }
 
-#[test]
-fn test_partial_ord() {
-    let one = Scalar::one();
-    assert!(one < -one);
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::scalar::R2;
 
-#[test]
-fn test_xor() {
-    let a = Scalar::from(500u64);
-    let b = Scalar::from(499u64);
-    let res = Scalar::from(7u64);
-    assert_eq!(&a ^ &b, res);
-}
-
-#[test]
-fn test_and() {
-    let a = Scalar::one();
-    let b = Scalar::one();
-    let res = Scalar::one();
-    assert_eq!(&a & &b, res);
-    assert_eq!(a & -a, Scalar::zero());
-}
-
-#[test]
-fn test_iter_sum() {
-    let scalars = vec![Scalar::one(), Scalar::one()];
-    let res: Scalar = scalars.iter().sum();
-    assert_eq!(res, Scalar::one() + Scalar::one());
-}
-
-#[test]
-fn test_iter_prod() {
-    let scalars = vec![Scalar::one() + Scalar::one(), Scalar::one() + Scalar::one()];
-    let res: Scalar = scalars.iter().product();
-    assert_eq!(res, Scalar::from(4u64));
-}
-
-#[test]
-fn bit_repr() {
-    let two_pow_128 = Scalar::from(2u64).pow(&[128, 0, 0, 0]);
-    let two_pow_128_bits = [
-        0u8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 1, 0u8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    ];
-    assert_eq!(&two_pow_128.to_bits()[..], &two_pow_128_bits[..]);
-
-    let two_pow_128_minus_rand = Scalar::from(2u64).pow(&[128, 0, 0, 0]) - Scalar::from(7568589u64);
-    let two_pow_128_bits = [
-        1u8, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1,
-        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-        1, 1, 1, 1, 1, 1, 1, 1,
-    ];
-    assert_eq!(
-        &two_pow_128_minus_rand.to_bits()[..128],
-        &two_pow_128_bits[..]
-    )
-}
-
-#[test]
-fn pow_of_two_test() {
-    let two = Scalar::from(2u64);
-    for i in 0..1000 {
-        assert_eq!(Scalar::pow_of_2(i as u64), two.pow(&[i as u64, 0, 0, 0]));
-    }
-}
-
-#[test]
-fn test_scalar_eq_and_hash() {
-    use sha3::{Digest, Keccak256};
-
-    let r0 = Scalar::from_raw([
-        0x1fff_3231_233f_fffd,
-        0x4884_b7fa_0003_4802,
-        0x998c_4fef_ecbc_4ff3,
-        0x1824_b159_acc5_0562,
-    ]);
-    let r1 = Scalar::from_raw([
-        0x1fff_3231_233f_fffd,
-        0x4884_b7fa_0003_4802,
-        0x998c_4fef_ecbc_4ff3,
-        0x1824_b159_acc5_0562,
-    ]);
-    let r2 = Scalar::from(7);
-
-    // Check PartialEq
-    assert!(r0 == r1);
-    assert!(r0 != r2);
-
-    let hash_r0 = Keccak256::digest(&r0.to_bytes());
-    let hash_r1 = Keccak256::digest(&r1.to_bytes());
-    let hash_r2 = Keccak256::digest(&r2.to_bytes());
-
-    // Check if hash results are consistent with PartialEq results
-    assert_eq!(hash_r0, hash_r1);
-    assert_ne!(hash_r0, hash_r2);
-}
-
-#[test]
-fn test_to_be_bytes() {
-    assert_eq!(
-        Scalar::zero().to_be_bytes(),
-        [
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0
-        ]
-    );
-
-    assert_eq!(
-        Scalar::one().to_be_bytes(),
-        [
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 1
-        ]
-    );
-
-    assert_eq!(
-        R2.to_be_bytes(),
-        [
-            24, 36, 177, 89, 172, 197, 5, 111, 153, 140, 79, 239, 236, 188, 79, 245, 88, 132, 183,
-            250, 0, 3, 72, 2, 0, 0, 0, 1, 255, 255, 255, 254
-        ]
-    );
-
-    assert_eq!(
-        (-&Scalar::one()).to_be_bytes(),
-        [
-            115, 237, 167, 83, 41, 157, 125, 72, 51, 57, 216, 8, 9, 161, 216, 5, 83, 189, 164, 2,
-            255, 254, 91, 254, 255, 255, 255, 255, 0, 0, 0, 0
-        ]
-    );
-}
-
-#[cfg(all(test, feature = "alloc"))]
-mod fuzz {
-    use alloc::vec::Vec;
-
-    use crate::scalar::{Scalar, MODULUS};
-    use crate::util::sbb;
-
-    fn is_scalar_in_range(scalar: &Scalar) -> bool {
-        // subtraction against modulus must underflow
-        let borrow = scalar
-            .0
-            .iter()
-            .zip(MODULUS.0.iter())
-            .fold(0, |borrow, (&s, &m)| sbb(s, m, borrow).1);
-
-        borrow == u64::MAX
+    #[test]
+    fn test_partial_ord() {
+        let one = Scalar::one();
+        assert!(one < -one);
     }
 
-    quickcheck::quickcheck! {
-        fn prop_scalar_from_raw_bytes(bytes: Vec<u8>) -> bool {
-            let scalar = Scalar::hash_to_scalar(&bytes);
+    #[test]
+    fn test_xor() {
+        let a = Scalar::from(500u64);
+        let b = Scalar::from(499u64);
+        let res = Scalar::from(7u64);
+        assert_eq!(&a ^ &b, res);
+    }
 
-            is_scalar_in_range(&scalar)
+    #[test]
+    fn test_and() {
+        let a = Scalar::one();
+        let b = Scalar::one();
+        let res = Scalar::one();
+        assert_eq!(&a & &b, res);
+        assert_eq!(a & -a, Scalar::zero());
+    }
+
+    #[test]
+    fn test_iter_sum() {
+        let scalars = vec![Scalar::one(), Scalar::one()];
+        let res: Scalar = scalars.iter().sum();
+        assert_eq!(res, Scalar::one() + Scalar::one());
+    }
+
+    #[test]
+    fn test_iter_prod() {
+        let scalars = vec![Scalar::one() + Scalar::one(), Scalar::one() + Scalar::one()];
+        let res: Scalar = scalars.iter().product();
+        assert_eq!(res, Scalar::from(4u64));
+    }
+
+    #[test]
+    fn bit_repr() {
+        let two_pow_128 = Scalar::from(2u64).pow(&[128, 0, 0, 0]);
+        let two_pow_128_bits = [
+            0u8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0u8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        ];
+        assert_eq!(&two_pow_128.to_bits()[..], &two_pow_128_bits[..]);
+
+        let two_pow_128_minus_rand =
+            Scalar::from(2u64).pow(&[128, 0, 0, 0]) - Scalar::from(7568589u64);
+        let two_pow_128_bits = [
+            1u8, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        ];
+        assert_eq!(
+            &two_pow_128_minus_rand.to_bits()[..128],
+            &two_pow_128_bits[..]
+        )
+    }
+
+    #[test]
+    fn pow_of_two_test() {
+        let two = Scalar::from(2u64);
+        for i in 0..1000 {
+            assert_eq!(Scalar::pow_of_2(i as u64), two.pow(&[i as u64, 0, 0, 0]));
+        }
+    }
+
+    #[test]
+    fn test_scalar_eq_and_hash() {
+        use sha3::{Digest, Keccak256};
+
+        let r0 = Scalar::from_raw([
+            0x1fff_3231_233f_fffd,
+            0x4884_b7fa_0003_4802,
+            0x998c_4fef_ecbc_4ff3,
+            0x1824_b159_acc5_0562,
+        ]);
+        let r1 = Scalar::from_raw([
+            0x1fff_3231_233f_fffd,
+            0x4884_b7fa_0003_4802,
+            0x998c_4fef_ecbc_4ff3,
+            0x1824_b159_acc5_0562,
+        ]);
+        let r2 = Scalar::from(7);
+
+        // Check PartialEq
+        assert!(r0 == r1);
+        assert!(r0 != r2);
+
+        let hash_r0 = Keccak256::digest(&r0.to_bytes());
+        let hash_r1 = Keccak256::digest(&r1.to_bytes());
+        let hash_r2 = Keccak256::digest(&r2.to_bytes());
+
+        // Check if hash results are consistent with PartialEq results
+        assert_eq!(hash_r0, hash_r1);
+        assert_ne!(hash_r0, hash_r2);
+    }
+
+    #[test]
+    fn test_to_be_bytes() {
+        assert_eq!(
+            Scalar::zero().to_be_bytes(),
+            [
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0
+            ]
+        );
+
+        assert_eq!(
+            Scalar::one().to_be_bytes(),
+            [
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 1
+            ]
+        );
+
+        assert_eq!(
+            R2.to_be_bytes(),
+            [
+                24, 36, 177, 89, 172, 197, 5, 111, 153, 140, 79, 239, 236, 188, 79, 245, 88, 132,
+                183, 250, 0, 3, 72, 2, 0, 0, 0, 1, 255, 255, 255, 254
+            ]
+        );
+
+        assert_eq!(
+            (-&Scalar::one()).to_be_bytes(),
+            [
+                115, 237, 167, 83, 41, 157, 125, 72, 51, 57, 216, 8, 9, 161, 216, 5, 83, 189, 164,
+                2, 255, 254, 91, 254, 255, 255, 255, 255, 0, 0, 0, 0
+            ]
+        );
+    }
+
+    #[cfg(feature = "alloc")]
+    mod fuzz {
+        use alloc::vec::Vec;
+
+        use crate::scalar::{Scalar, MODULUS};
+        use crate::util::sbb;
+
+        fn is_scalar_in_range(scalar: &Scalar) -> bool {
+            // subtraction against modulus must underflow
+            let borrow = scalar
+                .0
+                .iter()
+                .zip(MODULUS.0.iter())
+                .fold(0, |borrow, (&s, &m)| sbb(s, m, borrow).1);
+
+            borrow == u64::MAX
+        }
+
+        quickcheck::quickcheck! {
+            fn prop_scalar_from_raw_bytes(bytes: Vec<u8>) -> bool {
+                let scalar = Scalar::hash_to_scalar(&bytes);
+
+                is_scalar_in_range(&scalar)
+            }
         }
     }
 }

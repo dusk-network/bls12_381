@@ -1,5 +1,7 @@
 //! This module provides an implementation of the $\mathbb{G}_2$ group of BLS12-381.
 
+#![allow(clippy::needless_borrow, clippy::needless_lifetimes, unused_attributes)]
+
 mod dusk;
 
 use core::borrow::Borrow;

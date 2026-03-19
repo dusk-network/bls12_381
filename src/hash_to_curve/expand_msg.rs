@@ -1,6 +1,8 @@
 //! This module implements message expansion consistent with the
 //! hash-to-curve RFC drafts 7 through 10
 
+#![allow(clippy::manual_div_ceil, clippy::needless_borrows_for_generic_args)]
+
 use core::{
     fmt::{self, Debug, Formatter},
     marker::PhantomData,

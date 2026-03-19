@@ -113,10 +113,10 @@ fn to_radix_2w_size_hint(w: usize) -> usize {
     debug_assert!(w <= 8);
 
     let digits_count = match w {
-        6 => (256 + w - 1) / w,
-        7 => (256 + w - 1) / w,
+        6 => 256_usize.div_ceil(w),
+        7 => 256_usize.div_ceil(w),
         // See comment in to_radix_2w on handling the terminal carry.
-        8 => (256 + w - 1) / w + 1,
+        8 => 256_usize.div_ceil(w) + 1,
         _ => panic!("invalid radix parameter"),
     };
 
@@ -140,8 +140,8 @@ fn to_radix_2w(scalar: &Scalar, w: usize) -> [i8; 43] {
 
     let mut carry = 0u64;
     let mut digits = [0i8; 43];
-    let digits_count = (256 + w - 1) / w;
-    for i in 0..digits_count {
+    let digits_count = 256_usize.div_ceil(w);
+    for (i, digit) in digits[..digits_count].iter_mut().enumerate() {
         // Construct a buffer of bits of the scalar, starting at `bit_offset`.
         let bit_offset = i * w;
         let u64_idx = bit_offset / 64;
@@ -161,7 +161,7 @@ fn to_radix_2w(scalar: &Scalar, w: usize) -> [i8; 43] {
 
         // Recenter coefficients from [0,2^w) to [-2^w/2, 2^w/2)
         carry = (coef + (radix / 2)) >> w;
-        digits[i] = ((coef as i64) - (carry << w) as i64) as i8;
+        *digit = ((coef as i64) - (carry << w) as i64) as i8;
     }
 
     // When w < 8, we can fold the final carry onto the last digit d,
