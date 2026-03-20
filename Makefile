@@ -6,13 +6,13 @@ test: ## Run tests (std + no_std)
 	@cargo test --no-default-features
 
 clippy: ## Run clippy
-	@cargo clippy --all-features -- -D warnings
+	@cargo clippy --all-features --features rkyv/size_32 -- -D warnings
 
 fmt: ## Format code
 	@cargo +nightly fmt --all
 
 check: ## Type-check
-	@cargo check --all-features
+	@cargo check --all-features --features rkyv/size_32
 
 doc: ## Generate docs
 	@cargo doc --no-deps

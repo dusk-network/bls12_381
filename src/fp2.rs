@@ -1,5 +1,7 @@
 //! This module implements arithmetic over the quadratic extension field Fp2.
 
+#![allow(clippy::needless_borrow, clippy::needless_lifetimes)]
+
 #[cfg(feature = "serde")]
 mod dusk;
 

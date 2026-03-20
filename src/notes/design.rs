@@ -63,8 +63,8 @@
 //!
 //! ## Nontrivial third root of unity
 //!
-//! To use the fast subgroup check algorithm for $\mathbb{G_1}$ from https://eprint.iacr.org/2019/814.pdf and
-//! https://eprint.iacr.org/2021/1130, it is necessary to find a nontrivial cube root of
+//! To use the fast subgroup check algorithm for $\mathbb{G_1}$ from <https://eprint.iacr.org/2019/814.pdf> and
+//! <https://eprint.iacr.org/2021/1130>, it is necessary to find a nontrivial cube root of
 //! unity β in Fp to define the endomorphism:
 //!        $$(x, y) \rightarrow (\beta x, y)$$
 //! which is equivalent to
@@ -88,8 +88,8 @@
 //!
 //! ## Psi
 //!
-//! To use the fast subgroup check algorithm for $\mathbb{G_2}$ from https://eprint.iacr.org/2019/814.pdf and
-//! https://eprint.iacr.org/2021/1130, it is necessary to find the endomorphism:
+//! To use the fast subgroup check algorithm for $\mathbb{G_2}$ from <https://eprint.iacr.org/2019/814.pdf> and
+//! <https://eprint.iacr.org/2021/1130>, it is necessary to find the endomorphism:
 //!
 //! $$(x, y, z) \rightarrow (x^q \psi_x, y^q \psi_y, z^q)$$
 //!
