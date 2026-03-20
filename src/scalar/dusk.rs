@@ -523,6 +523,22 @@ mod tests {
     }
 
     #[test]
+    fn hash_to_scalar_domain_test_vector() {
+        // Hardcoded test vector: hash_to_scalar([1u8; 32], b"domain separation test")
+        // Independently verified via BLAKE2b-512([1u8;32] || input) mod r.
+        let input = b"domain separation test";
+        let domain = [1u8; 32];
+
+        let expected = Scalar::from_bytes(&[
+            73, 9, 6, 130, 75, 93, 58, 207, 238, 158, 55, 241, 59, 223, 99, 132, 199, 130, 197,
+            252, 136, 34, 36, 63, 56, 45, 196, 205, 174, 25, 131, 74,
+        ])
+        .unwrap();
+
+        assert_eq!(Scalar::hash_to_scalar(&domain, input), expected);
+    }
+
+    #[test]
     fn hash_to_scalar_nonzero_domain_differs() {
         let input = b"domain separation test";
         let domain = [1u8; 32];
