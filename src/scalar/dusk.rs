@@ -276,6 +276,12 @@ impl Scalar {
     /// BLAKE2b into a 512-bits number, and then converting the number into its
     /// `Scalar` representation by reducing it by the modulo.
     ///
+    /// `domain` is a 32-byte domain separator. When all zeros, no domain
+    /// prefix is applied (backward-compatible with pre-domain callers).
+    /// When non-zero, the 32 bytes are prepended to the input before
+    /// hashing. Callers SHOULD use a unique non-zero domain tag for their
+    /// security context.
+    ///
     /// By treating the output of the BLAKE2b hash as a random oracle, this
     /// implementation follows the first conversion of
     /// <https://hackmd.io/zV6qe1_oSU-kYU6Tt7pO7Q> with concrete numbers:
@@ -290,12 +296,16 @@ impl Scalar {
     ///
     /// m = 3294906474794265442129797520630710739278575682199800681788903916070560242797
     /// ```
-    pub fn hash_to_scalar(input: &[u8]) -> Scalar {
-        let state = blake2b_simd::Params::new()
-            .hash_length(64)
-            .to_state()
-            .update(input)
-            .finalize();
+    pub fn hash_to_scalar(domain: &[u8; 32], input: &[u8]) -> Scalar {
+        let mut state = blake2b_simd::Params::new().hash_length(64).to_state();
+
+        // Zero domain = legacy behavior (no prefix).
+        // Non-zero domain = prepend 32-byte domain separator.
+        if domain.iter().any(|&b| b != 0) {
+            state.update(domain);
+        }
+
+        let state = state.update(input).finalize();
 
         let bytes = state.as_bytes();
 
@@ -486,6 +496,79 @@ mod tests {
         );
     }
 
+    #[test]
+    fn hash_to_scalar_zero_domain_is_legacy() {
+        // Zero domain must produce identical output to the old
+        // (domain-less) implementation: bare BLAKE2b-512 of the input.
+        let input = b"hash_to_scalar legacy test vector";
+
+        let legacy = blake2b_simd::Params::new()
+            .hash_length(64)
+            .to_state()
+            .update(input)
+            .finalize();
+        let bytes = legacy.as_bytes();
+        let expected = Scalar::from_u512([
+            u64::from_le_bytes(<[u8; 8]>::try_from(&bytes[0..8]).unwrap()),
+            u64::from_le_bytes(<[u8; 8]>::try_from(&bytes[8..16]).unwrap()),
+            u64::from_le_bytes(<[u8; 8]>::try_from(&bytes[16..24]).unwrap()),
+            u64::from_le_bytes(<[u8; 8]>::try_from(&bytes[24..32]).unwrap()),
+            u64::from_le_bytes(<[u8; 8]>::try_from(&bytes[32..40]).unwrap()),
+            u64::from_le_bytes(<[u8; 8]>::try_from(&bytes[40..48]).unwrap()),
+            u64::from_le_bytes(<[u8; 8]>::try_from(&bytes[48..56]).unwrap()),
+            u64::from_le_bytes(<[u8; 8]>::try_from(&bytes[56..64]).unwrap()),
+        ]);
+
+        assert_eq!(Scalar::hash_to_scalar(&[0u8; 32], input), expected);
+    }
+
+    #[test]
+    fn hash_to_scalar_domain_test_vector() {
+        // Hardcoded test vector: hash_to_scalar([1u8; 32], b"domain separation test")
+        // Independently verified via BLAKE2b-512([1u8;32] || input) mod r.
+        let input = b"domain separation test";
+        let domain = [1u8; 32];
+
+        let expected = Scalar::from_bytes(&[
+            73, 9, 6, 130, 75, 93, 58, 207, 238, 158, 55, 241, 59, 223, 99, 132, 199, 130, 197,
+            252, 136, 34, 36, 63, 56, 45, 196, 205, 174, 25, 131, 74,
+        ])
+        .unwrap();
+
+        assert_eq!(Scalar::hash_to_scalar(&domain, input), expected);
+    }
+
+    #[test]
+    fn hash_to_scalar_nonzero_domain_differs() {
+        let input = b"domain separation test";
+        let domain = [1u8; 32];
+
+        let without_domain = Scalar::hash_to_scalar(&[0u8; 32], input);
+        let with_domain = Scalar::hash_to_scalar(&domain, input);
+
+        assert_ne!(without_domain, with_domain);
+    }
+
+    #[test]
+    fn hash_to_scalar_different_domains_differ() {
+        let input = b"cross-domain test";
+        let domain_a = {
+            let mut d = [0u8; 32];
+            d[0] = 1;
+            d
+        };
+        let domain_b = {
+            let mut d = [0u8; 32];
+            d[0] = 2;
+            d
+        };
+
+        let result_a = Scalar::hash_to_scalar(&domain_a, input);
+        let result_b = Scalar::hash_to_scalar(&domain_b, input);
+
+        assert_ne!(result_a, result_b);
+    }
+
     #[cfg(feature = "alloc")]
     mod fuzz {
         use alloc::vec::Vec;
@@ -506,7 +589,7 @@ mod tests {
 
         quickcheck::quickcheck! {
             fn prop_scalar_from_raw_bytes(bytes: Vec<u8>) -> bool {
-                let scalar = Scalar::hash_to_scalar(&bytes);
+                let scalar = Scalar::hash_to_scalar(&[0u8; 32], &bytes);
 
                 is_scalar_in_range(&scalar)
             }

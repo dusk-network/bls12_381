@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `hash_to_scalar` now takes a `domain: &[u8; 32]` parameter for domain separation. Pass `&[0u8; 32]` for backward-compatible behavior
 - Serde feature no longer has any std dependence [#3596]
 
 ## [0.14.2] - 2025-02-17
