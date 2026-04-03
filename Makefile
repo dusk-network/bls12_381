@@ -6,10 +6,16 @@ test: ## Run tests (std + no_std)
 	@cargo test --no-default-features
 
 clippy: ## Run clippy
-	@cargo clippy --all-features --features rkyv/size_32 -- -D warnings
+	@cargo clippy --features rkyv-impl,rkyv/size_32,serde,nightly -- -D warnings
+	@cargo clippy --no-default-features -- -D warnings
+
+cq: ## Run code quality checks (formatting + clippy)
+	@$(MAKE) fmt CHECK=1
+	@$(MAKE) clippy
 
 fmt: ## Format code
-	@cargo +nightly fmt --all
+	@rustup component add --toolchain nightly rustfmt 2>/dev/null || true
+	@cargo +nightly fmt --all $(if $(CHECK),-- --check,)
 
 check: ## Type-check
 	@cargo check --all-features --features rkyv/size_32
@@ -27,4 +33,4 @@ no-std: ## Verify no_std + WASM compatibility
 	@rustup target add wasm32-unknown-unknown 2>/dev/null || true
 	@cargo build --release --no-default-features --features serde --target wasm32-unknown-unknown
 
-.PHONY: help test clippy fmt check doc clean test-no-std no-std
+.PHONY: help test clippy cq fmt check doc clean test-no-std no-std
