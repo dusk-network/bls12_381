@@ -7,6 +7,7 @@ test: ## Run tests (std + no_std)
 
 clippy: ## Run clippy
 	@cargo clippy --features rkyv-impl,rkyv/size_32,serde,nightly -- -D warnings
+	@cargo clippy --no-default-features -- -D warnings
 
 cq: ## Run code quality checks (formatting + clippy)
 	@$(MAKE) fmt CHECK=1
