@@ -276,11 +276,13 @@ impl Scalar {
     /// BLAKE2b into a 512-bits number, and then converting the number into its
     /// `Scalar` representation by reducing it by the modulo.
     ///
-    /// `domain` is an optional 32-byte domain separator. When `None`, no
-    /// domain prefix is applied. When `Some(d)`, the 32 bytes are prepended
-    /// to the input before hashing — including `Some([0u8; 32])`, which
-    /// *does* prepend 32 zero bytes (unlike `None`). Callers SHOULD use a
-    /// unique non-zero domain tag for their security context.
+    /// `domain` is an optional 32-byte domain separator. When `None`, the
+    /// input is hashed with the legacy, unpersonalized BLAKE2b construction.
+    /// When `Some(d)`, BLAKE2b-512 uses
+    /// `personal = b"DUSK-H2S-BLS\0\0\0\0"` over `d || input`. This keeps
+    /// `None` byte-for-byte compatible while preventing a domain-separated
+    /// invocation from aliasing a legacy input with the same prefix. Callers
+    /// SHOULD use a unique non-zero domain tag for their security context.
     ///
     /// By treating the output of the BLAKE2b hash as a random oracle, this
     /// implementation follows the first conversion of
@@ -297,9 +299,19 @@ impl Scalar {
     /// m = 3294906474794265442129797520630710739278575682199800681788903916070560242797
     /// ```
     pub fn hash_to_scalar(domain: impl Into<Option<[u8; 32]>>, input: &[u8]) -> Scalar {
-        let mut state = blake2b_simd::Params::new().hash_length(64).to_state();
+        const DOMAIN_PERSONALIZATION: &[u8; 16] = b"DUSK-H2S-BLS\0\0\0\0";
 
-        if let Some(d) = domain.into() {
+        let domain = domain.into();
+        let mut params = blake2b_simd::Params::new();
+        params.hash_length(64);
+
+        if domain.is_some() {
+            params.personal(DOMAIN_PERSONALIZATION);
+        }
+
+        let mut state = params.to_state();
+
+        if let Some(d) = domain {
             state.update(&d);
         }
 
@@ -522,14 +534,15 @@ mod tests {
 
     #[test]
     fn hash_to_scalar_domain_test_vector() {
-        // Hardcoded test vector: hash_to_scalar([1u8; 32], b"domain separation test")
-        // Independently verified via BLAKE2b-512([1u8;32] || input) mod r.
+        // Hardcoded test vector: BLAKE2b-512 with personalization
+        // b"DUSK-H2S-BLS\0\0\0\0" over [1u8; 32] || b"domain separation test",
+        // interpreted as a little-endian integer and reduced modulo r.
         let input = b"domain separation test";
         let domain = [1u8; 32];
 
         let expected = Scalar::from_bytes(&[
-            73, 9, 6, 130, 75, 93, 58, 207, 238, 158, 55, 241, 59, 223, 99, 132, 199, 130, 197,
-            252, 136, 34, 36, 63, 56, 45, 196, 205, 174, 25, 131, 74,
+            68, 78, 68, 133, 202, 172, 62, 69, 229, 214, 45, 61, 54, 73, 196, 94, 203, 129, 75,
+            254, 94, 204, 65, 99, 244, 188, 35, 102, 51, 227, 209, 55,
         ])
         .unwrap();
 
@@ -545,6 +558,19 @@ mod tests {
         let with_domain = Scalar::hash_to_scalar(domain, input);
 
         assert_ne!(without_domain, with_domain);
+    }
+
+    #[test]
+    fn hash_to_scalar_domain_cannot_alias_legacy_input() {
+        let domain = [0x42; 32];
+        let input = b"domain-separated input";
+        let mut legacy_input = domain.to_vec();
+        legacy_input.extend_from_slice(input);
+
+        assert_ne!(
+            Scalar::hash_to_scalar(domain, input),
+            Scalar::hash_to_scalar(None, &legacy_input),
+        );
     }
 
     #[test]

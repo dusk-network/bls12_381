@@ -11,10 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Replace removed `CtOption::into_option` with `Option::from`
 - Reject non-boolean values in `Choice` wrapper (`From<u8>` masks input, `Serializable::from_bytes` and rkyv `CheckBytes` reject values other than 0/1)
+- Prevent domain-separated `hash_to_scalar` calls from aliasing legacy inputs with the same domain prefix [#168]
 
 ### Changed
 
-- `hash_to_scalar` now takes an optional `domain: impl Into<Option<[u8; 32]>>` parameter for domain separation. Pass `None` for no domain prefix, or a `[u8; 32]` value to prepend a 32-byte domain separator before hashing
+- `hash_to_scalar` now takes an optional `domain: impl Into<Option<[u8; 32]>>` parameter for domain separation. Pass `None` for the byte-compatible legacy construction, or a `[u8; 32]` value to select the personalized domain-separated construction
 - Serde feature no longer has any std dependence [#3596]
 
 ## [0.14.2] - 2025-02-17
@@ -272,6 +273,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- Issues -->
 [#3596]: https://github.com/dusk-network/rusk/issues/3596
+[#168]: https://github.com/dusk-network/bls12_381/issues/168
 [#154]: https://github.com/dusk-network/bls12_381/issues/154
 [#151]: https://github.com/dusk-network/bls12_381/issues/151
 [#148]: https://github.com/dusk-network/bls12_381/issues/148
