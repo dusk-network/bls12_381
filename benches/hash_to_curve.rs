@@ -5,7 +5,8 @@ extern crate dusk_bls12_381;
 use dusk_bls12_381::hash_to_curve::*;
 use dusk_bls12_381::*;
 
-use criterion::{black_box, Criterion};
+use criterion::Criterion;
+use std::hint::black_box;
 
 fn criterion_benchmark(c: &mut Criterion) {
     // G1Projective

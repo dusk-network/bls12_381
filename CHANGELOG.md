@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Update Criterion to 0.8 and remove unused development dependencies
 - Raise the minimum supported Rust version to 1.96.1
 - `hash_to_scalar` now takes an optional `domain: impl Into<Option<[u8; 32]>>` parameter for domain separation. Pass `None` for the byte-compatible legacy construction, or a `[u8; 32]` value to select the personalized domain-separated construction
 - Serde feature no longer has any std dependence [#3596]
