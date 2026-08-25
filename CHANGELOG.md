@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Reject malformed `G2Prepared` Serde representations
 - Replace removed `CtOption::into_option` with `Option::from`
 - Reject non-boolean values in `Choice` wrapper (`From<u8>` masks input, `Serializable::from_bytes` and rkyv `CheckBytes` reject values other than 0/1)
 - Prevent domain-separated `hash_to_scalar` calls from aliasing legacy inputs with the same domain prefix [#168]
