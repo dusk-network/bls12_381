@@ -20,7 +20,7 @@ impl G2Prepared {
     /// without any check.
     pub fn to_raw_bytes(&self) -> Vec<u8> {
         let mut bytes = alloc::vec![0u8; 288 * self.coeffs.len()];
-        let mut chunks = bytes.chunks_exact_mut(8);
+        let mut chunks = bytes.as_chunks_mut::<8>().0.iter_mut();
 
         self.coeffs.iter().for_each(|(a, b, c)| {
             a.c0.internal_repr()
@@ -49,7 +49,9 @@ impl G2Prepared {
     /// function is for trusted bytes where performance is critical.
     pub unsafe fn from_slice_unchecked(bytes: &[u8]) -> Self {
         let coeffs = bytes
-            .chunks_exact(288)
+            .as_chunks::<288>()
+            .0
+            .iter()
             .map(|c| {
                 let mut ac0 = [0u64; 6];
                 let mut ac1 = [0u64; 6];
@@ -65,7 +67,7 @@ impl G2Prepared {
                     .chain(bc1.iter_mut())
                     .chain(cc0.iter_mut())
                     .chain(cc1.iter_mut())
-                    .zip(c.chunks_exact(8))
+                    .zip(c.as_chunks::<8>().0.iter())
                     .for_each(|(n, c)| {
                         z.copy_from_slice(c);
                         *n = u64::from_le_bytes(z);
