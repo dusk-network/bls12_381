@@ -96,12 +96,68 @@ impl G2Prepared {
 
 #[cfg(feature = "serde")]
 mod serde_support {
-    use serde::de::{Error as SerdeError, MapAccess, Visitor};
+    use serde::de::{Error as SerdeError, MapAccess, SeqAccess, Visitor};
     use serde::ser::SerializeStruct;
     use serde::{self, Deserialize, Deserializer, Serialize, Serializer};
 
     use super::*;
     use crate::dusk::choice::Choice;
+
+    const G2_PREPARED_COEFFICIENTS: usize = 68;
+
+    struct PreparedCoefficients(Vec<(Fp2, Fp2, Fp2)>);
+
+    impl<'de> Deserialize<'de> for PreparedCoefficients {
+        fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+            struct PreparedCoefficientsVisitor;
+
+            impl<'de> Visitor<'de> for PreparedCoefficientsVisitor {
+                type Value = PreparedCoefficients;
+
+                fn expecting(&self, formatter: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+                    write!(
+                        formatter,
+                        "exactly {G2_PREPARED_COEFFICIENTS} Miller-loop coefficients"
+                    )
+                }
+
+                fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<Self::Value, A::Error> {
+                    if seq
+                        .size_hint()
+                        .is_some_and(|len| len > G2_PREPARED_COEFFICIENTS)
+                    {
+                        return Err(SerdeError::custom(format_args!(
+                            "prepared point contains more than {G2_PREPARED_COEFFICIENTS} coefficients"
+                        )));
+                    }
+
+                    let mut coeffs = Vec::with_capacity(
+                        seq.size_hint()
+                            .unwrap_or_default()
+                            .min(G2_PREPARED_COEFFICIENTS),
+                    );
+                    while let Some(coeff) = seq.next_element()? {
+                        if coeffs.len() == G2_PREPARED_COEFFICIENTS {
+                            return Err(SerdeError::custom(format_args!(
+                                "prepared point contains more than {G2_PREPARED_COEFFICIENTS} coefficients"
+                            )));
+                        }
+                        coeffs.push(coeff);
+                    }
+
+                    if coeffs.len() != G2_PREPARED_COEFFICIENTS {
+                        return Err(SerdeError::custom(format_args!(
+                            "prepared point must contain exactly {G2_PREPARED_COEFFICIENTS} coefficients"
+                        )));
+                    }
+
+                    Ok(PreparedCoefficients(coeffs))
+                }
+            }
+
+            deserializer.deserialize_seq(PreparedCoefficientsVisitor)
+        }
+    }
 
     impl Serialize for G2Prepared {
         fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
@@ -127,7 +183,7 @@ mod serde_support {
 
                 fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<Self::Value, A::Error> {
                     let mut infinity: Option<u8> = None;
-                    let mut coeffs = None;
+                    let mut coeffs: Option<PreparedCoefficients> = None;
                     while let Some(key) = map.next_key()? {
                         match key {
                             "infinity" => {
@@ -147,11 +203,16 @@ mod serde_support {
                             field => return Err(SerdeError::unknown_field(field, FIELDS)),
                         }
                     }
+                    let infinity = infinity.ok_or_else(|| SerdeError::missing_field("infinity"))?;
+                    if infinity > 1 {
+                        return Err(SerdeError::custom("infinity must be 0 or 1"));
+                    }
+
+                    let coeffs = coeffs.ok_or_else(|| SerdeError::missing_field("coeffs"))?.0;
+
                     Ok(G2Prepared {
-                        infinity: Choice::from(
-                            infinity.ok_or_else(|| SerdeError::missing_field("infinity"))?,
-                        ),
-                        coeffs: coeffs.ok_or_else(|| SerdeError::missing_field("coeffs"))?,
+                        infinity: Choice::from(infinity),
+                        coeffs,
                     })
                 }
             }
@@ -180,6 +241,32 @@ mod serde_support {
             assert_eq!(g2_prepared.coeffs, deser.coeffs);
             assert_eq!(g2_prepared.infinity.unwrap_u8(), deser.infinity.unwrap_u8());
             Ok(())
+        }
+
+        #[test]
+        fn serde_g2_prepared_rejects_non_boolean_infinity() {
+            let mut json: serde_json::Value =
+                serde_json::from_str(include_str!("./g2_prepared.json")).unwrap();
+            json["infinity"] = serde_json::Value::from(2);
+
+            assert!(serde_json::from_value::<G2Prepared>(json).is_err());
+        }
+
+        #[test]
+        fn serde_g2_prepared_rejects_wrong_coefficient_count() {
+            let json: serde_json::Value =
+                serde_json::from_str(include_str!("./g2_prepared.json")).unwrap();
+            let coefficients = json["coeffs"].as_array().unwrap();
+
+            for count in [67, 69] {
+                let mut invalid = json.clone();
+                invalid["coeffs"] = serde_json::Value::Array(
+                    coefficients.iter().cloned().cycle().take(count).collect(),
+                );
+                let invalid = serde_json::to_string(&invalid).unwrap();
+
+                assert!(serde_json::from_str::<G2Prepared>(&invalid).is_err());
+            }
         }
     }
 }
