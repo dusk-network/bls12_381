@@ -57,7 +57,7 @@ impl G2Affine {
             .chain(xc1.iter_mut())
             .chain(yc0.iter_mut())
             .chain(yc1.iter_mut())
-            .zip(bytes.chunks_exact(8))
+            .zip(bytes.as_chunks::<8>().0.iter())
             .for_each(|(n, c)| {
                 z.copy_from_slice(c);
                 *n = u64::from_le_bytes(z);

@@ -50,7 +50,9 @@ impl G1Affine {
         let mut z = [0u8; 8];
 
         bytes
-            .chunks_exact(8)
+            .as_chunks::<8>()
+            .0
+            .iter()
             .zip(x.iter_mut().chain(y.iter_mut()))
             .for_each(|(c, n)| {
                 z.copy_from_slice(c);
