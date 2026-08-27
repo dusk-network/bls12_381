@@ -9,7 +9,6 @@ use alloc::vec::*;
 /// Performs multiscalar multiplication reliying on Pippenger's algorithm.
 /// This method was taken from `curve25519-dalek` and was originally made by
 /// Oleg Andreev <oleganza@gmail.com>.
-#[cfg(feature = "byteorder")]
 pub fn pippenger<P, I>(points: P, scalars: I) -> G1Projective
 where
     P: Iterator<Item = G1Projective>,
@@ -92,7 +91,6 @@ where
 }
 
 /// Compute \\([2\^k] P \\) by successive doublings. Requires \\( k > 0 \\).
-#[cfg(feature = "byteorder")]
 pub(crate) fn mul_by_pow_2(point: &G1Projective, k: u32) -> G1Projective {
     debug_assert!(k > 0);
     let mut r: G1Projective;
@@ -107,7 +105,6 @@ pub(crate) fn mul_by_pow_2(point: &G1Projective, k: u32) -> G1Projective {
 
 /// Returns a size hint indicating how many entries of the return
 /// value of `to_radix_2w` are nonzero.
-#[cfg(feature = "byteorder")]
 fn to_radix_2w_size_hint(w: usize) -> usize {
     debug_assert!(w >= 6);
     debug_assert!(w <= 8);
@@ -124,16 +121,16 @@ fn to_radix_2w_size_hint(w: usize) -> usize {
     digits_count
 }
 
-#[cfg(feature = "byteorder")]
 fn to_radix_2w(scalar: &Scalar, w: usize) -> [i8; 43] {
     debug_assert!(w >= 6);
     debug_assert!(w <= 8);
 
-    use byteorder::{ByteOrder, LittleEndian};
-
     // Scalar formatted as four `u64`s with carry bit packed into the highest bit.
-    let mut scalar64x4 = [0u64; 4];
-    LittleEndian::read_u64_into(&scalar.to_bytes(), &mut scalar64x4[0..4]);
+    let bytes = scalar.to_bytes();
+    let scalar64x4: [u64; 4] = core::array::from_fn(|i| {
+        let start = i * 8;
+        u64::from_le_bytes(bytes[start..start + 8].try_into().unwrap())
+    });
 
     let radix: u64 = 1 << w;
     let window_mask: u64 = radix - 1;
@@ -283,7 +280,6 @@ mod tests {
     #[allow(unused_imports)]
     use super::*;
 
-    #[cfg(feature = "byteorder")]
     #[test]
     fn pippenger_test() {
         // Reuse points across different tests
