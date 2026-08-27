@@ -80,11 +80,6 @@ optional = true
 version = "1.0"
 default-features = false
 
-[dependencies.byteorder]
-version = "1"
-default-features = false
-optional = true
-
 [dependencies.rayon]
 version = "1"
 optional = true
@@ -114,7 +109,7 @@ optional = true
 # End
 
 [features]
-default = ["groups", "pairings", "alloc", "bits", "parallel", "byteorder"]
+default = ["groups", "pairings", "alloc", "bits", "parallel"]
 bits = ["ff/bits"]
 groups = ["group"]
 pairings = ["groups", "pairing"]

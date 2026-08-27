@@ -58,7 +58,7 @@ cargo bench --bench hash_to_curve --features experimental  # Hash-to-curve bench
 - `Fp2`, `Fp6`, `Fp12` — extension field towers
 - Dusk additions: multiscalar multiplication, w-NAF, hash-to-scalar
 
-### Features (defaults: groups, pairings, alloc, bits, parallel, byteorder)
+### Features (defaults: groups, pairings, alloc, bits, parallel)
 
 - `groups` — G1, G2, GT arithmetic
 - `pairings` — bilinear pairings
