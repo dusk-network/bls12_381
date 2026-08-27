@@ -6,7 +6,7 @@ use crate::{
 
 use alloc::vec::*;
 
-/// Performs multiscalar multiplication reliying on Pippenger's algorithm.
+/// Performs multiscalar multiplication relying on Pippenger's algorithm.
 /// This method was taken from `curve25519-dalek` and was originally made by
 /// Oleg Andreev <oleganza@gmail.com>.
 pub fn pippenger<P, I>(points: P, scalars: I) -> G1Projective
