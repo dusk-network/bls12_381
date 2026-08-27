@@ -5,9 +5,8 @@
 // Copyright (c) DUSK NETWORK. All rights reserved.
 
 use dusk_bytes::{Error as BytesError, Serializable};
-use subtle::{Choice, ConditionallySelectable, CtOption};
 
-use super::{G2Affine, B};
+use super::G2Affine;
 use crate::fp::Fp;
 use crate::fp2::Fp2;
 
@@ -84,113 +83,12 @@ impl G2Affine {
 impl Serializable<96> for G2Affine {
     type Error = BytesError;
 
-    /// Serializes this element into compressed form. See [`notes::serialization`](crate::notes::serialization)
-    /// for details about how group elements are serialized.
     fn to_bytes(&self) -> [u8; Self::SIZE] {
-        let infinity = self.infinity.into();
-
-        // Strictly speaking, self.x is zero already when self.infinity is true, but
-        // to guard against implementation mistakes we do not assume this.
-        let x = Fp2::conditional_select(&self.x, &Fp2::zero(), infinity);
-
-        let mut res = [0; Self::SIZE];
-
-        (res[0..48]).copy_from_slice(&x.c1.to_bytes()[..]);
-        (res[48..96]).copy_from_slice(&x.c0.to_bytes()[..]);
-
-        // This point is in compressed form, so we set the most significant bit.
-        res[0] |= 1u8 << 7;
-
-        // Is this point at infinity? If so, set the second-most significant bit.
-        res[0] |= u8::conditional_select(&0u8, &(1u8 << 6), infinity);
-
-        // Is the y-coordinate the lexicographically largest of the two associated with the
-        // x-coordinate? If so, set the third-most significant bit so long as this is not
-        // the point at infinity.
-        res[0] |= u8::conditional_select(
-            &0u8,
-            &(1u8 << 5),
-            (!infinity) & self.y.lexicographically_largest(),
-        );
-
-        res
+        self.to_compressed()
     }
 
-    /// Attempts to deserialize a compressed element. See [`notes::serialization`](crate::notes::serialization)
-    /// for details about how group elements are serialized.
     fn from_bytes(buf: &[u8; Self::SIZE]) -> Result<Self, Self::Error> {
-        // We already know the point is on the curve because this is established
-        // by the y-coordinate recovery procedure in from_compressed_unchecked().
-
-        // Obtain the three flags from the start of the byte sequence
-        let compression_flag_set = Choice::from((buf[0] >> 7) & 1);
-        let infinity_flag_set = Choice::from((buf[0] >> 6) & 1);
-        let sort_flag_set = Choice::from((buf[0] >> 5) & 1);
-
-        // Attempt to obtain the x-coordinate
-        let xc1 = {
-            let mut tmp = [0; 48];
-            tmp.copy_from_slice(&buf[0..48]);
-
-            // Mask away the flag bits
-            tmp[0] &= 0b0001_1111;
-
-            Fp::from_bytes(&tmp)
-        };
-        let xc0 = {
-            let mut tmp = [0; 48];
-            tmp.copy_from_slice(&buf[48..96]);
-
-            Fp::from_bytes(&tmp)
-        };
-
-        let x: Option<Self> = xc1
-            .and_then(|xc1| {
-                xc0.and_then(|xc0| {
-                    let x = Fp2 { c0: xc0, c1: xc1 };
-
-                    // If the infinity flag is set, return the value assuming
-                    // the x-coordinate is zero and the sort bit is not set.
-                    //
-                    // Otherwise, return a recovered point (assuming the correct
-                    // y-coordinate can be found) so long as the infinity flag
-                    // was not set.
-                    CtOption::new(
-                        G2Affine::identity(),
-                        infinity_flag_set & // Infinity flag should be set
-                    compression_flag_set & // Compression flag should be set
-                    (!sort_flag_set) & // Sort flag should not be set
-                    x.is_zero(), // The x-coordinate should be zero
-                    )
-                    .or_else(|| {
-                        // Recover a y-coordinate given x by y = sqrt(x^3 + 4)
-                        ((x.square() * x) + B).sqrt().and_then(|y| {
-                            // Switch to the correct y-coordinate if necessary.
-                            let y = Fp2::conditional_select(
-                                &y,
-                                &-y,
-                                y.lexicographically_largest() ^ sort_flag_set,
-                            );
-
-                            CtOption::new(
-                                G2Affine {
-                                    x,
-                                    y,
-                                    infinity: infinity_flag_set.into(),
-                                },
-                                (!infinity_flag_set) & // Infinity flag should not be set
-                            compression_flag_set, // Compression flag should be set
-                            )
-                        })
-                    })
-                })
-            })
-            .into();
-
-        match x {
-            Some(x) if x.is_torsion_free().unwrap_u8() == 1 => Ok(x),
-            _ => Err(BytesError::InvalidData),
-        }
+        Option::from(Self::from_compressed(buf)).ok_or(BytesError::InvalidData)
     }
 }
 

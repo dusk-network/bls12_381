@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Delegate affine point serialization to the canonical compressed implementations [#155]
 - Replace `byteorder` with native little-endian conversion and remove its feature
 - Update Criterion to 0.8 and remove unused development dependencies
 - Raise the minimum supported Rust version to 1.96.1
@@ -278,6 +279,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- Issues -->
 [#3596]: https://github.com/dusk-network/rusk/issues/3596
 [#168]: https://github.com/dusk-network/bls12_381/issues/168
+[#155]: https://github.com/dusk-network/bls12_381/issues/155
 [#154]: https://github.com/dusk-network/bls12_381/issues/154
 [#151]: https://github.com/dusk-network/bls12_381/issues/151
 [#148]: https://github.com/dusk-network/bls12_381/issues/148
