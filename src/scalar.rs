@@ -18,8 +18,6 @@ use ff::{FieldBits, PrimeFieldBits};
 use crate::util::{adc, mac, sbb};
 
 #[cfg(feature = "rkyv-impl")]
-use bytecheck::CheckBytes;
-#[cfg(feature = "rkyv-impl")]
 use rkyv::{Archive, Deserialize as RkyvDeserialize, Serialize as RkyvSerialize};
 
 /// Represents an element of the scalar field $\mathbb{F}_q$ of the BLS12-381 elliptic
@@ -28,11 +26,7 @@ use rkyv::{Archive, Deserialize as RkyvDeserialize, Serialize as RkyvSerialize};
 // integers in little-endian order. `Scalar` values are always in
 // Montgomery form; i.e., Scalar(a) = aR mod q, with R = 2^256.
 #[derive(Clone, Copy, Eq)]
-#[cfg_attr(
-    feature = "rkyv-impl",
-    derive(Archive, RkyvSerialize, RkyvDeserialize),
-    archive_attr(derive(CheckBytes))
-)]
+#[cfg_attr(feature = "rkyv-impl", derive(Archive, RkyvSerialize, RkyvDeserialize))]
 pub struct Scalar(pub [u64; 4]);
 
 impl fmt::Debug for Scalar {

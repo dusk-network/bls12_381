@@ -13,6 +13,75 @@ use subtle::{Choice, ConditionallySelectable, ConstantTimeEq};
 
 use super::Scalar;
 
+#[cfg(feature = "rkyv-impl")]
+use bytecheck::CheckBytes;
+#[cfg(feature = "rkyv-impl")]
+use rkyv::Archived;
+
+#[cfg(feature = "rkyv-impl")]
+use super::MODULUS;
+#[cfg(feature = "rkyv-impl")]
+use crate::dusk::archive::{invalid_tuple, limbs_are_canonical};
+
+#[cfg(feature = "rkyv-impl")]
+impl<C: ?Sized> CheckBytes<C> for super::ArchivedScalar
+where
+    Archived<[u64; 4]>: CheckBytes<C>,
+{
+    type Error = bytecheck::TupleStructCheckError;
+
+    unsafe fn check_bytes<'a>(
+        value: *const Self,
+        context: &mut C,
+    ) -> Result<&'a Self, Self::Error> {
+        let archived = unsafe {
+            <Archived<[u64; 4]> as CheckBytes<C>>::check_bytes(&raw const (*value).0, context)
+        }
+        .map_err(|error| bytecheck::TupleStructCheckError {
+            field_index: 0,
+            inner: bytecheck::ErrorBox::new(error),
+        })?;
+
+        let limbs: [u64; 4] =
+            rkyv::Deserialize::deserialize(archived, &mut rkyv::Infallible).unwrap();
+
+        if !limbs_are_canonical(&limbs, &MODULUS.0) {
+            return Err(invalid_tuple(0, "scalar is not canonical"));
+        }
+
+        Ok(unsafe { &*value })
+    }
+}
+
+#[cfg(all(test, feature = "rkyv-impl"))]
+mod rkyv_tests {
+    use super::*;
+
+    fn is_valid(value: &Scalar) -> bool {
+        let bytes = rkyv::to_bytes::<_, 256>(value).unwrap();
+        let archived = unsafe { rkyv::archived_root::<Scalar>(&bytes) };
+        let ptr = archived as *const Archived<Scalar>;
+        unsafe { <Archived<Scalar> as CheckBytes<()>>::check_bytes(ptr, &mut ()) }.is_ok()
+    }
+
+    #[test]
+    fn rejects_noncanonical_scalar_limbs() {
+        let mut largest = MODULUS.0;
+        largest[0] -= 1;
+
+        assert!(is_valid(&Scalar::zero()));
+        assert!(is_valid(&Scalar(largest)));
+        assert!(!is_valid(&MODULUS));
+        assert!(!is_valid(&Scalar([u64::MAX; 4])));
+
+        #[cfg(feature = "alloc")]
+        {
+            let bytes = rkyv::to_bytes::<_, 256>(&alloc::vec![MODULUS]).unwrap();
+            assert!(rkyv::from_bytes::<alloc::vec::Vec<Scalar>>(&bytes).is_err());
+        }
+    }
+}
+
 /// Orders scalars by comparing their internal Montgomery-form limbs
 /// lexicographically (most-significant limb first).
 ///
