@@ -6,6 +6,9 @@
 
 pub(crate) mod choice;
 
+#[cfg(feature = "rkyv-impl")]
+pub(crate) mod archive;
+
 #[cfg(all(feature = "groups", feature = "alloc"))]
 pub mod multiscalar_mul;
 

@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Reject non-canonical field and scalar representations during RKYV validation [#175]
 - Reject malformed `G2Prepared` Serde representations
 - Replace removed `CtOption::into_option` with `Option::from`
 - Reject non-boolean values in `Choice` wrapper (`From<u8>` masks input, `Serializable::from_bytes` and rkyv `CheckBytes` reject values other than 0/1)
@@ -277,6 +278,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Rename `S` to `TWO_ADACITY` and export it
 
 <!-- Issues -->
+[#175]: https://github.com/dusk-network/bls12_381/issues/175
 [#3596]: https://github.com/dusk-network/rusk/issues/3596
 [#168]: https://github.com/dusk-network/bls12_381/issues/168
 [#155]: https://github.com/dusk-network/bls12_381/issues/155
