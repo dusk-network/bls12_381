@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add checked raw decoding for `G1Affine`
+
 ### Fixed
 
 - Reject non-canonical field and scalar representations during RKYV validation [#175]
