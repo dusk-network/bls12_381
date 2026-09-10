@@ -4,15 +4,17 @@
 //
 // Copyright (c) DUSK NETWORK. All rights reserved.
 
-use super::Fp;
+use subtle::Choice;
 
 #[cfg(feature = "rkyv-impl")]
 use bytecheck::CheckBytes;
 #[cfg(feature = "rkyv-impl")]
 use rkyv::Archived;
 
-#[cfg(feature = "rkyv-impl")]
-use super::MODULUS;
+use super::{Fp, MODULUS};
+
+use crate::util::sbb;
+
 #[cfg(feature = "rkyv-impl")]
 use crate::dusk::archive::{invalid_tuple, limbs_are_canonical};
 
@@ -47,6 +49,17 @@ where
 }
 
 impl Fp {
+    /// Returns whether the internal Montgomery representation is canonical.
+    pub(crate) fn is_canonical(&self) -> Choice {
+        let borrow = self
+            .0
+            .iter()
+            .zip(MODULUS)
+            .fold(0, |borrow, (&limb, modulus)| sbb(limb, modulus, borrow).1);
+
+        Choice::from((borrow as u8) & 1)
+    }
+
     /// Internal representation of `Fp`
     pub const fn internal_repr(&self) -> &[u64; 6] {
         &self.0
