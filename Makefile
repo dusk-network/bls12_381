@@ -4,6 +4,7 @@ help: ## Display this help screen
 test: ## Run tests (std + no_std)
 	@cargo test --all-features
 	@cargo test --no-default-features
+	@cargo test --lib dusk::archive::points:: --features rkyv-validation,rkyv/size_32,rkyv/archive_be
 
 clippy: ## Run clippy
 	@cargo clippy --features rkyv-impl,rkyv/size_32,serde,nightly -- -D warnings
