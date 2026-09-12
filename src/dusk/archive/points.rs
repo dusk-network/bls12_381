@@ -135,7 +135,12 @@ mod tests {
                 }
                 let mut bytes = rkyv::to_bytes::<_, 256>(&g).unwrap();
                 bytes.fill(0xff);
+                assert!(rkyv::from_bytes::<$affine>(&bytes).is_err());
                 assert!($affine::from_archive_bytes(&bytes).is_err());
+                let mut bytes = rkyv::to_bytes::<_, 256>(&$projective::generator()).unwrap();
+                bytes.fill(0xff);
+                assert!(rkyv::from_bytes::<$projective>(&bytes).is_err());
+                assert!($projective::from_archive_bytes(&bytes).is_err());
             }
         };
     }
