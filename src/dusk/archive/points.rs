@@ -15,8 +15,10 @@ macro_rules! checked_archive {
             ///
             /// Identity is allowed, but its affine coordinates must be (0, 1).
             /// Protocols using public keys must additionally reject identity.
-            /// Existing `CheckBytes` and archive layouts remain unchanged;
-            /// trusted structural-only decoding does not call this method.
+            /// Existing `CheckBytes` and archive layouts remain unchanged.
+            /// Generic `rkyv::from_bytes::<Self>` and `rkyv::check_archived_root::<Self>`
+            /// validate representation only, not curve, subgroup or infinity semantics.
+            /// They require a trusted source or separate semantic checks before use.
             /// Invalid archives return [`dusk_bytes::Error::InvalidData`].
             pub fn from_archive_bytes(bytes: &[u8]) -> Result<Self, Error> {
                 let point = rkyv::from_bytes::<Self>(bytes).map_err(|_| Error::InvalidData)?;
@@ -37,6 +39,9 @@ macro_rules! checked_archive {
             /// Homogeneous infinity (0 : nonzero : 0) is allowed, including
             /// legitimate rescalings. Coordinates are not normalized on return.
             /// Existing `CheckBytes` and archive layouts remain unchanged.
+            /// Generic `rkyv::from_bytes::<Self>` and `rkyv::check_archived_root::<Self>`
+            /// validate representation only, not curve, subgroup or infinity semantics.
+            /// They require a trusted source or separate semantic checks before use.
             pub fn from_archive_bytes(bytes: &[u8]) -> Result<Self, Error> {
                 let point = rkyv::from_bytes::<Self>(bytes).map_err(|_| Error::InvalidData)?;
                 let infinity = !point.is_identity() | (point.x.is_zero() & !point.y.is_zero());
