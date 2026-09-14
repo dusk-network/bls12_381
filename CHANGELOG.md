@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Add opt-in strict G1/G2 archive decoders under `rkyv-validation` [#178].
+- Add strict `from_archive_bytes` decoders for `G1Affine`, `G1Projective`, `G2Affine` and `G2Projective` under `rkyv-validation` [#178].
 - Add checked raw decoding through `G1Affine::from_raw_slice`
 
 ### Fixed

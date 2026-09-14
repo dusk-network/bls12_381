@@ -3,12 +3,11 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use dusk_bytes::Error;
-use subtle::ConstantTimeEq;
 
-use crate::{fp::Fp, fp2::Fp2, G1Affine, G1Projective, G2Affine, G2Projective};
+use crate::{G1Affine, G1Projective, G2Affine, G2Projective};
 
 macro_rules! checked_archive {
-    ($affine:ty, $projective:ty, $field:ty) => {
+    ($affine:ty, $projective:ty) => {
         impl $affine {
             /// Decode an untrusted archive, checking representation, curve,
             /// subgroup and infinity coordinates. Requires `rkyv-validation`.
@@ -19,12 +18,18 @@ macro_rules! checked_archive {
             /// Generic `rkyv::from_bytes::<Self>` and `rkyv::check_archived_root::<Self>`
             /// validate representation only, not curve, subgroup or infinity semantics.
             /// They require a trusted source or separate semantic checks before use.
-            /// Invalid archives return [`dusk_bytes::Error::InvalidData`].
+            ///
+            /// `bytes` must contain exactly `core::mem::size_of::<rkyv::Archived<Self>>()`
+            /// bytes, aligned to `core::mem::align_of::<rkyv::Archived<Self>>()`.
+            /// Use [`rkyv::AlignedVec`] for suitably aligned storage. Invalid lengths,
+            /// alignment or point data return [`dusk_bytes::Error::InvalidData`].
+            /// No alignment copy is made.
             pub fn from_archive_bytes(bytes: &[u8]) -> Result<Self, Error> {
+                if bytes.len() != core::mem::size_of::<rkyv::Archived<Self>>() {
+                    return Err(Error::InvalidData);
+                }
                 let point = rkyv::from_bytes::<Self>(bytes).map_err(|_| Error::InvalidData)?;
-                let infinity =
-                    !point.is_identity() | (point.x.is_zero() & point.y.ct_eq(&<$field>::one()));
-                if bool::from(infinity & point.is_on_curve() & point.is_torsion_free()) {
+                if bool::from(point.is_valid()) {
                     Ok(point)
                 } else {
                     Err(Error::InvalidData)
@@ -42,12 +47,20 @@ macro_rules! checked_archive {
             /// Generic `rkyv::from_bytes::<Self>` and `rkyv::check_archived_root::<Self>`
             /// validate representation only, not curve, subgroup or infinity semantics.
             /// They require a trusted source or separate semantic checks before use.
+            ///
+            /// `bytes` must contain exactly `core::mem::size_of::<rkyv::Archived<Self>>()`
+            /// bytes, aligned to `core::mem::align_of::<rkyv::Archived<Self>>()`.
+            /// Use [`rkyv::AlignedVec`] for suitably aligned storage. Invalid lengths,
+            /// alignment or point data return [`dusk_bytes::Error::InvalidData`].
+            /// No alignment copy is made.
             pub fn from_archive_bytes(bytes: &[u8]) -> Result<Self, Error> {
+                if bytes.len() != core::mem::size_of::<rkyv::Archived<Self>>() {
+                    return Err(Error::InvalidData);
+                }
                 let point = rkyv::from_bytes::<Self>(bytes).map_err(|_| Error::InvalidData)?;
-                let infinity = !point.is_identity() | (point.x.is_zero() & !point.y.is_zero());
-                if bool::from(
-                    infinity & point.is_on_curve() & <$affine>::from(point).is_torsion_free(),
-                ) {
+                let canonical_identity =
+                    !point.is_identity() | (point.x.is_zero() & !point.y.is_zero());
+                if bool::from(canonical_identity & <$affine>::from(point).is_valid()) {
                     Ok(point)
                 } else {
                     Err(Error::InvalidData)
@@ -57,13 +70,13 @@ macro_rules! checked_archive {
     };
 }
 
-checked_archive!(G1Affine, G1Projective, Fp);
-checked_archive!(G2Affine, G2Projective, Fp2);
+checked_archive!(G1Affine, G1Projective);
+checked_archive!(G2Affine, G2Projective);
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::BlsScalar;
+    use crate::{fp::Fp, fp2::Fp2, BlsScalar};
 
     macro_rules! check {
         ($type:ty, $point:expr, $valid:expr) => {{
@@ -94,6 +107,11 @@ mod tests {
                     $projective::generator(),
                     $projective::identity(),
                     g * BlsScalar::from(37u64),
+                    $projective {
+                        x: g.x + g.x,
+                        y: g.y + g.y,
+                        z: <$field>::one() + <$field>::one(),
+                    },
                     $projective {
                         x: <$field>::zero(),
                         y: <$field>::one() + <$field>::one(),

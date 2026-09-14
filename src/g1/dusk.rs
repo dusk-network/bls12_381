@@ -36,6 +36,13 @@ impl G1Affine {
         bytes
     }
 
+    /// Check curve, subgroup and canonical affine identity semantics.
+    pub(crate) fn is_valid(&self) -> subtle::Choice {
+        let canonical_identity =
+            !self.is_identity() | (self.x.is_zero() & self.y.ct_eq(&Fp::one()));
+        canonical_identity & self.is_on_curve() & self.is_torsion_free()
+    }
+
     /// Attempts to create a `G1Affine` from its raw representation.
     ///
     /// The coordinates must be canonical field elements and the resulting point
@@ -51,8 +58,6 @@ impl G1Affine {
         let point = unsafe { Self::from_slice_unchecked(&raw) };
         let infinity = raw[Self::RAW_SIZE - 1];
         let valid_infinity = infinity.ct_eq(&0) | infinity.ct_eq(&1);
-        let canonical_identity =
-            infinity.ct_eq(&0) | (point.x.is_zero() & point.y.ct_eq(&Fp::one()));
 
         CtOption::new(
             point,
@@ -60,9 +65,7 @@ impl G1Affine {
                 & point.x.is_canonical()
                 & point.y.is_canonical()
                 & valid_infinity
-                & canonical_identity
-                & point.is_on_curve()
-                & point.is_torsion_free(),
+                & point.is_valid(),
         )
     }
 
