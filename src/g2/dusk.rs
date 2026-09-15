@@ -163,6 +163,27 @@ mod serde_support {
 }
 
 #[test]
+fn g2_affine_serializable_rejects_malformed_encodings() {
+    let from_bytes = <G2Affine as Serializable<96>>::from_bytes;
+    for point in [G2Affine::generator(), G2Affine::identity()] {
+        assert_eq!(from_bytes(&point.to_bytes()), Ok(point));
+    }
+
+    let mut no_compression = G2Affine::generator().to_bytes();
+    no_compression[0] &= !0x80;
+    let mut nonzero_infinity = G2Affine::identity().to_bytes();
+    nonzero_infinity[95] = 1;
+
+    for (case, bytes) in [
+        ("cleared compression flag", no_compression),
+        ("infinity with nonzero x", nonzero_infinity),
+        ("all-zero buffer", [0; 96]),
+    ] {
+        assert_eq!(from_bytes(&bytes), Err(BytesError::InvalidData), "{case}");
+    }
+}
+
+#[test]
 fn g2_affine_bytes_unchecked() {
     let gen = G2Affine::generator();
     let ident = G2Affine::identity();
