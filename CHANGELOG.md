@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Add strict `from_archive_bytes` decoders for `G1Affine`, `G1Projective`, `G2Affine` and `G2Projective` under `rkyv-validation` [#178].
+- Add opt-in recursive point validation through `rkyv-semantic-validation`, omitting `CheckBytes` for unauthenticated pairing caches while retaining legacy structural behavior by default [#178].
+- Add checked MSM entry points and make existing wrappers reject insufficient bases while preserving trailing-base prefix semantics.
 - Add checked raw decoding through `G1Affine::from_raw_slice`
 
 ### Fixed
@@ -22,6 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Document variable-time scalar inversion and multiscalar multiplication APIs.
+- Make `G2Prepared` Serde serialization-only so untrusted consumers reconstruct it from a validated `G2Affine` [#178].
 - Delegate affine point serialization to the canonical compressed implementations [#155]
 - Replace `byteorder` with native little-endian conversion and remove its feature
 - Update Criterion to 0.8 and remove unused development dependencies

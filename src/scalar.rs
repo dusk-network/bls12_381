@@ -413,6 +413,9 @@ impl Scalar {
 
     /// Computes the multiplicative inverse of this element, failing if the
     /// element is zero.
+    ///
+    /// **This operation is variable time with respect to the input.** Use
+    /// [`Scalar::invert_ct`] when the scalar is secret.
     pub fn invert(&self) -> Option<Self> {
         if *self == Scalar::zero() {
             return None;

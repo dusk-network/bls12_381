@@ -6,12 +6,14 @@
 
 use core::fmt;
 
+#[cfg(all(feature = "groups", feature = "rkyv-semantic-validation"))]
+use bytecheck::StructCheckError;
 use bytecheck::{ErrorBox, TupleStructCheckError};
 
 use crate::util::sbb;
 
 #[cfg(all(feature = "groups", feature = "rkyv-validation"))]
-mod points;
+pub(crate) mod points;
 
 #[derive(Debug)]
 struct SemanticCheckError(&'static str);
@@ -27,6 +29,14 @@ impl core::error::Error for SemanticCheckError {}
 pub(crate) fn invalid_tuple(field_index: usize, message: &'static str) -> TupleStructCheckError {
     TupleStructCheckError {
         field_index,
+        inner: ErrorBox::new(SemanticCheckError(message)),
+    }
+}
+
+#[cfg(all(feature = "groups", feature = "rkyv-semantic-validation"))]
+pub(crate) fn invalid_struct(field_name: &'static str, message: &'static str) -> StructCheckError {
+    StructCheckError {
+        field_name,
         inner: ErrorBox::new(SemanticCheckError(message)),
     }
 }

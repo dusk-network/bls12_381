@@ -94,11 +94,10 @@ pub use pairings::{pairing, Bls12, Gt, MillerLoopResult};
 #[cfg(all(feature = "pairings", feature = "alloc"))]
 pub use pairings::{multi_miller_loop, G2Prepared};
 
+#[cfg(all(feature = "pairings", feature = "alloc", feature = "rkyv-impl"))]
+pub use pairings::{ArchivedG2Prepared, G2PreparedResolver};
 #[cfg(all(feature = "pairings", feature = "rkyv-impl"))]
-pub use pairings::{
-    ArchivedG2Prepared, ArchivedGt, ArchivedMillerLoopResult, G2PreparedResolver, GtResolver,
-    MillerLoopResultResolver,
-};
+pub use pairings::{ArchivedGt, ArchivedMillerLoopResult, GtResolver, MillerLoopResultResolver};
 
 /// Use the generic_array re-exported by digest to avoid a version mismatch
 #[cfg(feature = "experimental")]
