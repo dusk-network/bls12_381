@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Add strict `from_archive_bytes` decoders for `G1Affine`, `G1Projective`, `G2Affine` and `G2Projective` under `rkyv-validation` [#178].
 - Add checked raw decoding through `G1Affine::from_raw_slice`
 
 ### Fixed
@@ -282,6 +283,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Rename `S` to `TWO_ADACITY` and export it
 
 <!-- Issues -->
+[#178]: https://github.com/dusk-network/bls12_381/issues/178
 [#175]: https://github.com/dusk-network/bls12_381/issues/175
 [#3596]: https://github.com/dusk-network/rusk/issues/3596
 [#168]: https://github.com/dusk-network/bls12_381/issues/168

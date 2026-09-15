@@ -119,4 +119,5 @@ nightly = ["subtle/nightly"]
 # Features added by Dusk
 parallel = ["rayon"]
 rkyv-impl = ["rkyv", "rkyv/alloc", "bytecheck"]
+rkyv-validation = ["rkyv-impl", "rkyv/validation"]
 serde = ["serde/alloc", "hex/alloc"]

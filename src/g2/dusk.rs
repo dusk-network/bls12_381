@@ -11,6 +11,16 @@ use crate::fp::Fp;
 use crate::fp2::Fp2;
 
 impl G2Affine {
+    /// Check curve, subgroup and canonical affine identity semantics.
+    #[cfg(feature = "rkyv-validation")]
+    pub(crate) fn is_valid(&self) -> subtle::Choice {
+        use subtle::ConstantTimeEq;
+
+        let canonical_identity =
+            !self.is_identity() | (self.x.is_zero() & self.y.ct_eq(&Fp2::one()));
+        canonical_identity & self.is_on_curve() & self.is_torsion_free()
+    }
+
     /// Raw bytes representation
     ///
     /// The intended usage of this function is for trusted sets of data where performance is

@@ -10,6 +10,9 @@ use bytecheck::{ErrorBox, TupleStructCheckError};
 
 use crate::util::sbb;
 
+#[cfg(all(feature = "groups", feature = "rkyv-validation"))]
+mod points;
+
 #[derive(Debug)]
 struct SemanticCheckError(&'static str);
 
