@@ -36,7 +36,12 @@ This crate provides an implementation of the BLS12-381 pairing-friendly elliptic
 * `parallel` (on by default): Enables `rayon` usage for highly parallelizable ops such as multiscalar multiplication.
 * `rkyv-impl`: Enables legacy-compatible RKYV archive and structural `CheckBytes` implementations.
 * `rkyv-validation`: Enables RKYV's generic structural checked-decoding infrastructure and standalone strict point archive helpers without changing the legacy `CheckBytes` policy.
-* `rkyv-semantic-validation`: Additionally applies semantic point validation recursively during generic checked RKYV decoding. This changes rejection behavior for invalid archives and must be selected deliberately.
+* `rkyv-semantic-validation` (off by default, **non-additive**): Applies semantic point validation recursively during generic checked RKYV decoding.
+  Cargo feature unification means that enabling it through any dependency on the
+  same resolved crate changes point-decoding acceptance and removes `CheckBytes`
+  from archived `G2Prepared`, `Gt` and `MillerLoopResult` for all consumers of that
+  crate instance. `default-features = false` cannot opt out of another dependency's
+  request.
 
 ## Archive trust boundaries
 

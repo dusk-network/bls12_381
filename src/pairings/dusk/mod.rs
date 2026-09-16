@@ -127,6 +127,32 @@ mod serde_support {
     }
 }
 
+#[cfg(all(feature = "rkyv-impl", feature = "alloc"))]
+#[test]
+fn trusted_pairing_archives_still_round_trip() {
+    use crate::{multi_miller_loop, G1Affine, G2Affine, Gt, MillerLoopResult};
+    use rkyv::Deserialize;
+
+    let prepared = G2Prepared::from(G2Affine::generator());
+    let bytes = rkyv::to_bytes::<_, 1024>(&prepared).unwrap();
+    let archived = unsafe { rkyv::archived_root::<G2Prepared>(&bytes) };
+    let restored: G2Prepared = archived.deserialize(&mut rkyv::Infallible).unwrap();
+    assert_eq!(prepared.infinity.unwrap_u8(), restored.infinity.unwrap_u8());
+    assert_eq!(prepared.coeffs, restored.coeffs);
+
+    let miller = multi_miller_loop(&[(&G1Affine::generator(), &prepared)]);
+    let bytes = rkyv::to_bytes::<_, 1024>(&miller).unwrap();
+    let archived = unsafe { rkyv::archived_root::<MillerLoopResult>(&bytes) };
+    let restored: MillerLoopResult = archived.deserialize(&mut rkyv::Infallible).unwrap();
+    assert_eq!(miller.0, restored.0);
+
+    let target = miller.final_exponentiation();
+    let bytes = rkyv::to_bytes::<_, 1024>(&target).unwrap();
+    let archived = unsafe { rkyv::archived_root::<Gt>(&bytes) };
+    let restored: Gt = archived.deserialize(&mut rkyv::Infallible).unwrap();
+    assert_eq!(target, restored);
+}
+
 #[test]
 fn g2_prepared_bytes_unchecked() {
     use crate::G2Affine;

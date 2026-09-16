@@ -11,13 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add strict `from_archive_bytes` decoders for `G1Affine`, `G1Projective`, `G2Affine` and `G2Projective` under `rkyv-validation` [#178].
 - Add opt-in recursive point validation through `rkyv-semantic-validation`, omitting `CheckBytes` for unauthenticated pairing caches while retaining legacy structural behavior by default [#178].
-- Add checked MSM entry points and make existing wrappers reject insufficient bases while preserving trailing-base prefix semantics.
+- Add `try_pippenger`, `try_msm_variable_base` and `InsufficientBases` [#183].
 - Add checked raw decoding through `G1Affine::from_raw_slice`
 
 ### Fixed
 
 - Reject non-canonical field and scalar representations during RKYV validation [#175]
-- Reject malformed `G2Prepared` Serde representations
 - Replace removed `CtOption::into_option` with `Option::from`
 - Reject non-boolean values in `Choice` wrapper (`From<u8>` masks input, `Serializable::from_bytes` and rkyv `CheckBytes` reject values other than 0/1)
 - Prevent domain-separated `hash_to_scalar` calls from aliasing legacy inputs with the same domain prefix [#168]
@@ -25,13 +24,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Document variable-time scalar inversion and multiscalar multiplication APIs.
-- Make `G2Prepared` Serde serialization-only so untrusted consumers reconstruct it from a validated `G2Affine` [#178].
+- Make `pippenger` and `msm_variable_base` panic on insufficient bases [#183].
 - Delegate affine point serialization to the canonical compressed implementations [#155]
 - Replace `byteorder` with native little-endian conversion and remove its feature
 - Update Criterion to 0.8 and remove unused development dependencies
 - Raise the minimum supported Rust version to 1.96.1
 - `hash_to_scalar` now takes an optional `domain: impl Into<Option<[u8; 32]>>` parameter for domain separation. Pass `None` for the byte-compatible legacy construction, or a `[u8; 32]` value to select the personalized domain-separated construction
 - Serde feature no longer has any std dependence [#3596]
+
+### Removed
+
+- Remove Serde `Deserialize` for `G2Prepared` [#178].
 
 ## [0.14.2] - 2025-02-17
 
@@ -287,6 +290,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Rename `S` to `TWO_ADACITY` and export it
 
 <!-- Issues -->
+[#183]: https://github.com/dusk-network/bls12_381/issues/183
 [#178]: https://github.com/dusk-network/bls12_381/issues/178
 [#175]: https://github.com/dusk-network/bls12_381/issues/175
 [#3596]: https://github.com/dusk-network/rusk/issues/3596

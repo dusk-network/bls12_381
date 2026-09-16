@@ -6,10 +6,12 @@ test: ## Run tests (std + no_std)
 	@cargo test --no-default-features
 	@cargo test --test archive_legacy --features rkyv-validation,rkyv/size_32
 	@cargo test --lib dusk::archive::points:: --features rkyv-semantic-validation,rkyv/size_32,rkyv/archive_be
+	@cargo test --lib dusk::archive::points:: --features rkyv-validation,rkyv/size_32,rkyv/archive_be
 	@cargo test --test archive_points --features rkyv-validation,rkyv/size_32,rkyv/archive_be
 
 clippy: ## Run clippy
 	@cargo clippy --features rkyv-semantic-validation,rkyv/size_32,serde,nightly -- -D warnings
+	@cargo clippy --features rkyv-validation,rkyv/size_32,serde,nightly -- -D warnings
 	@cargo clippy --no-default-features -- -D warnings
 
 cq: ## Run code quality checks (formatting + clippy)
