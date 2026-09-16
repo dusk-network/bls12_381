@@ -10,6 +10,25 @@ use super::G2Affine;
 use crate::fp::Fp;
 use crate::fp2::Fp2;
 
+#[cfg(feature = "rkyv-validation")]
+crate::dusk::archive::points::checked_point!(
+    G2Affine,
+    super::ArchivedG2Affine,
+    [x, y, infinity],
+    |point| point.is_valid()
+);
+
+#[cfg(feature = "rkyv-validation")]
+crate::dusk::archive::points::checked_point!(
+    crate::G2Projective,
+    super::ArchivedG2Projective,
+    [x, y, z],
+    |point| {
+        let canonical_identity = !point.is_identity() | (point.x.is_zero() & !point.y.is_zero());
+        canonical_identity & G2Affine::from(point).is_valid()
+    }
+);
+
 impl G2Affine {
     /// Check curve, subgroup and canonical affine identity semantics.
     #[cfg(feature = "rkyv-validation")]

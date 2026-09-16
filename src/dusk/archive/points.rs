@@ -2,87 +2,104 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use dusk_bytes::Error;
+macro_rules! checked_point {
+    ($native:ty, $archived:ty, [$($field:ident),+], |$point:ident| $valid:expr) => {
+        #[cfg(feature = "rkyv-semantic-validation")]
+        #[deny(unsafe_op_in_unsafe_fn)]
+        impl<C: ?Sized> bytecheck::CheckBytes<C> for $archived {
+            type Error = bytecheck::StructCheckError;
 
-use crate::{G1Affine, G1Projective, G2Affine, G2Projective};
+            unsafe fn check_bytes<'a>(
+                value: *const Self,
+                context: &mut C,
+            ) -> Result<&'a Self, Self::Error> {
+                $(
+                    unsafe {
+                        bytecheck::CheckBytes::check_bytes(&raw const (*value).$field, context)
+                    }
+                    .map_err(|error| bytecheck::StructCheckError {
+                        field_name: stringify!($field),
+                        inner: bytecheck::ErrorBox::new(error),
+                    })?;
+                )+
 
-macro_rules! checked_archive {
-    ($affine:ty, $projective:ty) => {
-        impl $affine {
-            /// Decode an untrusted archive, checking representation, curve,
-            /// subgroup and infinity coordinates. Requires `rkyv-validation`.
-            ///
-            /// Identity is allowed, but its affine coordinates must be (0, 1).
-            /// Protocols using public keys must additionally reject identity.
-            /// Existing `CheckBytes` and archive layouts remain unchanged.
-            /// Generic `rkyv::from_bytes::<Self>` and `rkyv::check_archived_root::<Self>`
-            /// validate representation only, not curve, subgroup or infinity semantics.
-            /// They require a trusted source or separate semantic checks before use.
-            ///
-            /// `bytes` must contain exactly `core::mem::size_of::<rkyv::Archived<Self>>()`
-            /// bytes, aligned to `core::mem::align_of::<rkyv::Archived<Self>>()`.
-            /// Use [`rkyv::AlignedVec`] for suitably aligned storage. Invalid lengths,
-            /// alignment or point data return [`dusk_bytes::Error::InvalidData`].
-            /// No alignment copy is made.
-            pub fn from_archive_bytes(bytes: &[u8]) -> Result<Self, Error> {
-                if bytes.len() != core::mem::size_of::<rkyv::Archived<Self>>() {
-                    return Err(Error::InvalidData);
+                let archived = unsafe { &*value };
+                let $point: $native =
+                    rkyv::Deserialize::deserialize(archived, &mut rkyv::Infallible).unwrap();
+                if !bool::from($valid) {
+                    return Err($crate::dusk::archive::invalid_struct(
+                        "point",
+                        "invalid curve, subgroup or infinity representation",
+                    ));
                 }
-                let point = rkyv::from_bytes::<Self>(bytes).map_err(|_| Error::InvalidData)?;
-                if bool::from(point.is_valid()) {
-                    Ok(point)
-                } else {
-                    Err(Error::InvalidData)
-                }
+
+                Ok(archived)
             }
         }
 
-        impl $projective {
-            /// Decode an untrusted archive with full prime-order point checks.
-            /// Requires `rkyv-validation`; returns `InvalidData` on failure.
+        #[cfg(feature = "rkyv-validation")]
+        impl $native {
+            /// Decode a standalone untrusted archive with full representation,
+            /// curve, subgroup and infinity checks.
             ///
-            /// Homogeneous infinity (0 : nonzero : 0) is allowed, including
-            /// legitimate rescalings. Coordinates are not normalized on return.
-            /// Existing `CheckBytes` and archive layouts remain unchanged.
-            /// Generic `rkyv::from_bytes::<Self>` and `rkyv::check_archived_root::<Self>`
-            /// validate representation only, not curve, subgroup or infinity semantics.
-            /// They require a trusted source or separate semantic checks before use.
+            /// `rkyv-semantic-validation` applies the same semantic checks
+            /// recursively when this point is nested in another archived type.
+            /// Identity group elements are allowed; protocols must reject identity
+            /// separately where their authorization rules require it.
             ///
             /// `bytes` must contain exactly `core::mem::size_of::<rkyv::Archived<Self>>()`
             /// bytes, aligned to `core::mem::align_of::<rkyv::Archived<Self>>()`.
             /// Use [`rkyv::AlignedVec`] for suitably aligned storage. Invalid lengths,
             /// alignment or point data return [`dusk_bytes::Error::InvalidData`].
-            /// No alignment copy is made.
-            pub fn from_archive_bytes(bytes: &[u8]) -> Result<Self, Error> {
+            pub fn from_archive_bytes(bytes: &[u8]) -> Result<Self, dusk_bytes::Error> {
                 if bytes.len() != core::mem::size_of::<rkyv::Archived<Self>>() {
-                    return Err(Error::InvalidData);
+                    return Err(dusk_bytes::Error::InvalidData);
                 }
-                let point = rkyv::from_bytes::<Self>(bytes).map_err(|_| Error::InvalidData)?;
-                let canonical_identity =
-                    !point.is_identity() | (point.x.is_zero() & !point.y.is_zero());
-                if bool::from(canonical_identity & <$affine>::from(point).is_valid()) {
-                    Ok(point)
-                } else {
-                    Err(Error::InvalidData)
+                let $point = rkyv::from_bytes::<Self>(bytes)
+                    .map_err(|_| dusk_bytes::Error::InvalidData)?;
+
+                #[cfg(feature = "rkyv-semantic-validation")]
+                {
+                    Ok($point)
+                }
+
+                #[cfg(not(feature = "rkyv-semantic-validation"))]
+                {
+                    if bool::from($valid) {
+                        Ok($point)
+                    } else {
+                        Err(dusk_bytes::Error::InvalidData)
+                    }
                 }
             }
         }
     };
 }
 
-checked_archive!(G1Affine, G1Projective);
-checked_archive!(G2Affine, G2Projective);
+pub(crate) use checked_point;
 
-#[cfg(test)]
+#[cfg(all(test, feature = "rkyv-validation"))]
 mod tests {
-    use super::*;
-    use crate::{fp::Fp, fp2::Fp2, BlsScalar};
+    use crate::{fp::Fp, fp2::Fp2, BlsScalar, G1Affine, G1Projective, G2Affine, G2Projective};
 
     macro_rules! check {
         ($type:ty, $point:expr, $valid:expr) => {{
             let bytes = rkyv::to_bytes::<_, 256>(&$point).unwrap();
-            // These fixtures must reach the semantic layer, not fail layout.
-            assert!(rkyv::from_bytes::<$type>(&bytes).is_ok());
+            let generic_valid = if cfg!(feature = "rkyv-semantic-validation") {
+                $valid
+            } else {
+                true
+            };
+            assert_eq!(rkyv::from_bytes::<$type>(&bytes).is_ok(), generic_valid);
+            assert_eq!(
+                rkyv::check_archived_root::<$type>(&bytes).is_ok(),
+                generic_valid
+            );
+            let nested = rkyv::to_bytes::<_, 256>(&(17u64, std::vec![$point])).unwrap();
+            assert_eq!(
+                rkyv::from_bytes::<(u64, std::vec::Vec<$type>)>(&nested).is_ok(),
+                generic_valid
+            );
             let result = <$type>::from_archive_bytes(&bytes);
             assert_eq!(result.is_ok(), $valid);
             if let Ok(point) = result {

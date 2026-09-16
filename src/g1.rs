@@ -37,9 +37,9 @@ use rkyv::{Archive, Deserialize as RkyvDeserialize, Serialize as RkyvSerialize};
 /// "unchecked" API was misused.
 #[cfg_attr(docsrs, doc(cfg(feature = "groups")))]
 #[derive(Copy, Clone, Debug)]
+#[cfg_attr(feature = "rkyv-impl", derive(Archive, RkyvSerialize, RkyvDeserialize))]
 #[cfg_attr(
-    feature = "rkyv-impl",
-    derive(Archive, RkyvSerialize, RkyvDeserialize),
+    all(feature = "rkyv-impl", not(feature = "rkyv-semantic-validation")),
     archive_attr(derive(CheckBytes))
 )]
 pub struct G1Affine {
@@ -456,9 +456,9 @@ fn endomorphism(p: &G1Affine) -> G1Affine {
 /// This is an element of $\mathbb{G}_1$ represented in the projective coordinate space.
 #[cfg_attr(docsrs, doc(cfg(feature = "groups")))]
 #[derive(Copy, Clone, Debug)]
+#[cfg_attr(feature = "rkyv-impl", derive(Archive, RkyvSerialize, RkyvDeserialize))]
 #[cfg_attr(
-    feature = "rkyv-impl",
-    derive(Archive, RkyvSerialize, RkyvDeserialize),
+    all(feature = "rkyv-impl", not(feature = "rkyv-semantic-validation")),
     archive_attr(derive(CheckBytes))
 )]
 pub struct G1Projective {

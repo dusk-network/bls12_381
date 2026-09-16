@@ -6,10 +6,43 @@ use crate::{
 
 use alloc::vec::*;
 
-/// Performs multiscalar multiplication relying on Pippenger's algorithm.
+/// Returned when a multiscalar multiplication receives fewer bases than scalars.
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub struct InsufficientBases;
+
+impl core::fmt::Display for InsufficientBases {
+    fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        formatter.write_str("multiscalar multiplication requires at least one base per scalar")
+    }
+}
+
+impl core::error::Error for InsufficientBases {}
+
+/// Panicking wrapper around [`try_pippenger`].
+///
+/// This has the same variable-time behavior and panics when there are fewer
+/// points than scalars.
+pub fn pippenger<P, I>(points: P, scalars: I) -> G1Projective
+where
+    P: Iterator<Item = G1Projective>,
+    I: Iterator<Item = Scalar>,
+{
+    try_pippenger(points, scalars)
+        .expect("multiscalar multiplication has fewer points than scalars")
+}
+
+/// Performs Pippenger multiscalar multiplication, rejecting insufficient bases.
 /// This method was taken from `curve25519-dalek` and was originally made by
 /// Oleg Andreev <oleganza@gmail.com>.
-pub fn pippenger<P, I>(points: P, scalars: I) -> G1Projective
+///
+/// Scalars are paired with the corresponding prefix of `points`; trailing
+/// points are ignored.
+///
+/// # Timing
+///
+/// This implementation is variable-time with respect to `scalars` and must not
+/// be used where scalar secrecy matters and timing or memory access is observable.
+pub fn try_pippenger<P, I>(mut points: P, scalars: I) -> Result<G1Projective, InsufficientBases>
 where
     P: Iterator<Item = G1Projective>,
     I: Iterator<Item = Scalar>,
@@ -33,8 +66,18 @@ where
 
     // Collect optimized scalars and points in buffers for repeated access
     // (scanning the whole set per digit position).
-    let scalars = scalars.map(|s| to_radix_2w(&s, w));
-    let scalars_points = scalars.zip(points).collect::<Vec<_>>();
+    let (points_lower, points_upper) = points.size_hint();
+    if points_upper.is_some_and(|points| points < size) {
+        return Err(InsufficientBases);
+    }
+    let mut scalars_points = Vec::new();
+    // Reserve only pairs both iterators guarantee. Iterators with loose size
+    // hints grow the buffer after each scalar has an available point.
+    let _ = scalars_points.try_reserve(size.min(points_lower));
+    for scalar in scalars {
+        let point = points.next().ok_or(InsufficientBases)?;
+        scalars_points.push((to_radix_2w(&scalar, w), point));
+    }
 
     // Prepare 2^w/2 buckets.
     // buckets[i] corresponds to a multiplication factor (i+1).
@@ -87,7 +130,7 @@ where
     // `unwrap()` always succeeds because we know we have more than zero digits.
     let hi_column = columns.next().unwrap();
 
-    columns.fold(hi_column, |total, p| mul_by_pow_2(&total, w as u32) + p)
+    Ok(columns.fold(hi_column, |total, p| mul_by_pow_2(&total, w as u32) + p))
 }
 
 /// Compute \\([2\^k] P \\) by successive doublings. Requires \\( k > 0 \\).
@@ -181,8 +224,32 @@ fn to_radix_2w(scalar: &Scalar, w: usize) -> [i8; 43] {
     digits
 }
 
-/// Performs a Variable Base Multiscalar Multiplication.
+/// Panicking wrapper around [`try_msm_variable_base`].
+///
+/// This has the same variable-time behavior and panics when there are fewer
+/// points than scalars.
 pub fn msm_variable_base(points: &[G1Affine], scalars: &[Scalar]) -> G1Projective {
+    try_msm_variable_base(points, scalars)
+        .expect("multiscalar multiplication has fewer points than scalars")
+}
+
+/// Performs variable-base multiscalar multiplication, rejecting insufficient bases.
+///
+/// Scalars are paired with the corresponding prefix of `points`; trailing
+/// points are ignored.
+///
+/// # Timing
+///
+/// This implementation is variable-time with respect to `scalars` and must not
+/// be used where scalar secrecy matters and timing or memory access is observable.
+pub fn try_msm_variable_base(
+    points: &[G1Affine],
+    scalars: &[Scalar],
+) -> Result<G1Projective, InsufficientBases> {
+    if points.len() < scalars.len() {
+        return Err(InsufficientBases);
+    }
+
     #[cfg(feature = "parallel")]
     use rayon::prelude::*;
 
@@ -254,7 +321,7 @@ pub fn msm_variable_base(points: &[G1Affine], scalars: &[Scalar]) -> G1Projectiv
     // We store the sum for the lowest window.
     let lowest = *window_sums.first().unwrap();
     // We're traversing windows from high to low.
-    window_sums[1..]
+    Ok(window_sums[1..]
         .iter()
         .rev()
         .fold(zero, |mut total, sum_i| {
@@ -264,7 +331,7 @@ pub fn msm_variable_base(points: &[G1Affine], scalars: &[Scalar]) -> G1Projectiv
             }
             total
         })
-        + lowest
+        + lowest)
 }
 
 fn ln_without_floats(a: usize) -> usize {
@@ -392,5 +459,79 @@ mod tests {
         let premultiplied = G1Projective::generator() * Scalar::from(100u64);
         let subject = msm_variable_base(&points, &scalars);
         assert_eq!(subject, premultiplied);
+    }
+
+    #[test]
+    fn msm_length_contracts_preserve_base_prefixes() {
+        let projective = alloc::vec![
+            G1Projective::generator(),
+            G1Projective::generator().double(),
+        ];
+        let affine = projective
+            .iter()
+            .copied()
+            .map(G1Affine::from)
+            .collect::<Vec<_>>();
+        let one = alloc::vec![Scalar::from(7u64)];
+        let two = alloc::vec![Scalar::from(7u64), Scalar::from(11u64)];
+        let expected = G1Projective::generator() * Scalar::from(7u64);
+
+        assert_eq!(
+            try_pippenger(projective.iter().copied(), one.iter().copied()),
+            Ok(expected)
+        );
+        assert_eq!(
+            try_pippenger(projective[..1].iter().copied(), two.iter().copied()),
+            Err(InsufficientBases)
+        );
+        assert_eq!(
+            try_pippenger(
+                core::iter::empty(),
+                core::iter::repeat(Scalar::one()).take(usize::MAX),
+            ),
+            Err(InsufficientBases)
+        );
+        assert_eq!(
+            try_pippenger(
+                core::iter::from_fn(|| None::<G1Projective>),
+                core::iter::repeat(Scalar::one()).take(usize::MAX),
+            ),
+            Err(InsufficientBases)
+        );
+        assert_eq!(
+            try_pippenger(
+                core::iter::repeat(G1Projective::identity()).take(usize::MAX - 1),
+                core::iter::repeat(Scalar::one()).take(usize::MAX),
+            ),
+            Err(InsufficientBases)
+        );
+        assert_eq!(try_msm_variable_base(&affine, &one), Ok(expected));
+        assert_eq!(
+            try_msm_variable_base(&affine[..1], &two),
+            Err(InsufficientBases)
+        );
+        assert_eq!(
+            try_pippenger(projective.iter().copied(), core::iter::empty()),
+            Ok(G1Projective::identity())
+        );
+        assert_eq!(
+            try_msm_variable_base(&affine, &[]),
+            Ok(G1Projective::identity())
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "fewer points than scalars")]
+    fn pippenger_panics_on_insufficient_bases() {
+        pippenger(
+            core::iter::once(G1Projective::generator()),
+            [Scalar::one(), Scalar::one()].into_iter(),
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "fewer points than scalars")]
+    fn variable_base_msm_panics_on_insufficient_bases() {
+        msm_variable_base(&[G1Affine::generator()], &[Scalar::one(), Scalar::one()]);
     }
 }

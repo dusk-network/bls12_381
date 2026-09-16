@@ -96,68 +96,10 @@ impl G2Prepared {
 
 #[cfg(feature = "serde")]
 mod serde_support {
-    use serde::de::{Error as SerdeError, MapAccess, SeqAccess, Visitor};
     use serde::ser::SerializeStruct;
-    use serde::{self, Deserialize, Deserializer, Serialize, Serializer};
+    use serde::{Serialize, Serializer};
 
     use super::*;
-    use crate::dusk::choice::Choice;
-
-    const G2_PREPARED_COEFFICIENTS: usize = 68;
-
-    struct PreparedCoefficients(Vec<(Fp2, Fp2, Fp2)>);
-
-    impl<'de> Deserialize<'de> for PreparedCoefficients {
-        fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-            struct PreparedCoefficientsVisitor;
-
-            impl<'de> Visitor<'de> for PreparedCoefficientsVisitor {
-                type Value = PreparedCoefficients;
-
-                fn expecting(&self, formatter: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-                    write!(
-                        formatter,
-                        "exactly {G2_PREPARED_COEFFICIENTS} Miller-loop coefficients"
-                    )
-                }
-
-                fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<Self::Value, A::Error> {
-                    if seq
-                        .size_hint()
-                        .is_some_and(|len| len > G2_PREPARED_COEFFICIENTS)
-                    {
-                        return Err(SerdeError::custom(format_args!(
-                            "prepared point contains more than {G2_PREPARED_COEFFICIENTS} coefficients"
-                        )));
-                    }
-
-                    let mut coeffs = Vec::with_capacity(
-                        seq.size_hint()
-                            .unwrap_or_default()
-                            .min(G2_PREPARED_COEFFICIENTS),
-                    );
-                    while let Some(coeff) = seq.next_element()? {
-                        if coeffs.len() == G2_PREPARED_COEFFICIENTS {
-                            return Err(SerdeError::custom(format_args!(
-                                "prepared point contains more than {G2_PREPARED_COEFFICIENTS} coefficients"
-                            )));
-                        }
-                        coeffs.push(coeff);
-                    }
-
-                    if coeffs.len() != G2_PREPARED_COEFFICIENTS {
-                        return Err(SerdeError::custom(format_args!(
-                            "prepared point must contain exactly {G2_PREPARED_COEFFICIENTS} coefficients"
-                        )));
-                    }
-
-                    Ok(PreparedCoefficients(coeffs))
-                }
-            }
-
-            deserializer.deserialize_seq(PreparedCoefficientsVisitor)
-        }
-    }
 
     impl Serialize for G2Prepared {
         fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
@@ -165,59 +107,6 @@ mod serde_support {
             ser_struct.serialize_field("infinity", &self.infinity.unwrap_u8())?;
             ser_struct.serialize_field("coeffs", &self.coeffs)?;
             ser_struct.end()
-        }
-    }
-
-    impl<'de> Deserialize<'de> for G2Prepared {
-        fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-            struct G2PreparedVisitor;
-
-            const FIELDS: &[&str] = &["infinity", "coeffs"];
-
-            impl<'de> Visitor<'de> for G2PreparedVisitor {
-                type Value = G2Prepared;
-
-                fn expecting(&self, formatter: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-                    formatter.write_str("a struct a with fields infinity and coeffs")
-                }
-
-                fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<Self::Value, A::Error> {
-                    let mut infinity: Option<u8> = None;
-                    let mut coeffs: Option<PreparedCoefficients> = None;
-                    while let Some(key) = map.next_key()? {
-                        match key {
-                            "infinity" => {
-                                if infinity.is_some() {
-                                    return Err(SerdeError::duplicate_field("infinity"));
-                                } else {
-                                    infinity = Some(map.next_value()?);
-                                }
-                            }
-                            "coeffs" => {
-                                if coeffs.is_some() {
-                                    return Err(SerdeError::duplicate_field("coeffs"));
-                                } else {
-                                    coeffs = Some(map.next_value()?);
-                                }
-                            }
-                            field => return Err(SerdeError::unknown_field(field, FIELDS)),
-                        }
-                    }
-                    let infinity = infinity.ok_or_else(|| SerdeError::missing_field("infinity"))?;
-                    if infinity > 1 {
-                        return Err(SerdeError::custom("infinity must be 0 or 1"));
-                    }
-
-                    let coeffs = coeffs.ok_or_else(|| SerdeError::missing_field("coeffs"))?.0;
-
-                    Ok(G2Prepared {
-                        infinity: Choice::from(infinity),
-                        coeffs,
-                    })
-                }
-            }
-
-            deserializer.deserialize_struct("G2Prepared", FIELDS, G2PreparedVisitor)
         }
     }
 
@@ -230,45 +119,38 @@ mod serde_support {
         use crate::G2Affine;
 
         #[test]
-        fn serde_g2_prepared() -> Result<(), Box<dyn std::error::Error>> {
+        fn serializes_g2_prepared_canonically() -> Result<(), Box<dyn std::error::Error>> {
             let g2_prepared = G2Prepared::from(G2Affine::generator());
-            let ser = test_utils::assert_canonical_json(
-                &g2_prepared,
-                include_str!("./g2_prepared.json"),
-            )?;
-            let deser: G2Prepared = serde_json::from_str(&ser).unwrap();
-
-            assert_eq!(g2_prepared.coeffs, deser.coeffs);
-            assert_eq!(g2_prepared.infinity.unwrap_u8(), deser.infinity.unwrap_u8());
+            test_utils::assert_canonical_json(&g2_prepared, include_str!("./g2_prepared.json"))?;
             Ok(())
         }
-
-        #[test]
-        fn serde_g2_prepared_rejects_non_boolean_infinity() {
-            let mut json: serde_json::Value =
-                serde_json::from_str(include_str!("./g2_prepared.json")).unwrap();
-            json["infinity"] = serde_json::Value::from(2);
-
-            assert!(serde_json::from_value::<G2Prepared>(json).is_err());
-        }
-
-        #[test]
-        fn serde_g2_prepared_rejects_wrong_coefficient_count() {
-            let json: serde_json::Value =
-                serde_json::from_str(include_str!("./g2_prepared.json")).unwrap();
-            let coefficients = json["coeffs"].as_array().unwrap();
-
-            for count in [67, 69] {
-                let mut invalid = json.clone();
-                invalid["coeffs"] = serde_json::Value::Array(
-                    coefficients.iter().cloned().cycle().take(count).collect(),
-                );
-                let invalid = serde_json::to_string(&invalid).unwrap();
-
-                assert!(serde_json::from_str::<G2Prepared>(&invalid).is_err());
-            }
-        }
     }
+}
+
+#[cfg(all(feature = "rkyv-impl", feature = "alloc"))]
+#[test]
+fn trusted_pairing_archives_still_round_trip() {
+    use crate::{multi_miller_loop, G1Affine, G2Affine, Gt, MillerLoopResult};
+    use rkyv::Deserialize;
+
+    let prepared = G2Prepared::from(G2Affine::generator());
+    let bytes = rkyv::to_bytes::<_, 1024>(&prepared).unwrap();
+    let archived = unsafe { rkyv::archived_root::<G2Prepared>(&bytes) };
+    let restored: G2Prepared = archived.deserialize(&mut rkyv::Infallible).unwrap();
+    assert_eq!(prepared.infinity.unwrap_u8(), restored.infinity.unwrap_u8());
+    assert_eq!(prepared.coeffs, restored.coeffs);
+
+    let miller = multi_miller_loop(&[(&G1Affine::generator(), &prepared)]);
+    let bytes = rkyv::to_bytes::<_, 1024>(&miller).unwrap();
+    let archived = unsafe { rkyv::archived_root::<MillerLoopResult>(&bytes) };
+    let restored: MillerLoopResult = archived.deserialize(&mut rkyv::Infallible).unwrap();
+    assert_eq!(miller.0, restored.0);
+
+    let target = miller.final_exponentiation();
+    let bytes = rkyv::to_bytes::<_, 1024>(&target).unwrap();
+    let archived = unsafe { rkyv::archived_root::<Gt>(&bytes) };
+    let restored: Gt = archived.deserialize(&mut rkyv::Infallible).unwrap();
+    assert_eq!(target, restored);
 }
 
 #[test]

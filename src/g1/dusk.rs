@@ -10,6 +10,25 @@ use subtle::{ConstantTimeEq, CtOption};
 use super::G1Affine;
 use crate::fp::Fp;
 
+#[cfg(feature = "rkyv-validation")]
+crate::dusk::archive::points::checked_point!(
+    G1Affine,
+    super::ArchivedG1Affine,
+    [x, y, infinity],
+    |point| point.is_valid()
+);
+
+#[cfg(feature = "rkyv-validation")]
+crate::dusk::archive::points::checked_point!(
+    crate::G1Projective,
+    super::ArchivedG1Projective,
+    [x, y, z],
+    |point| {
+        let canonical_identity = !point.is_identity() | (point.x.is_zero() & !point.y.is_zero());
+        canonical_identity & G1Affine::from(point).is_valid()
+    }
+);
+
 impl G1Affine {
     /// Bytes size of the raw representation
     pub const RAW_SIZE: usize = 97;

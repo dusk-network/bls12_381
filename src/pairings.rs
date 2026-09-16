@@ -1,3 +1,8 @@
+//! Pairing operations.
+//!
+//! Under `rkyv-semantic-validation`, pairing caches and intermediate values omit
+//! `CheckBytes`; reconstruct them from checked source points at untrusted
+//! boundaries. Legacy structural validation remains available under `rkyv-impl`.
 #![allow(clippy::needless_lifetimes, unused_attributes)]
 #[cfg(all(feature = "alloc", feature = "pairing"))]
 mod dusk;
@@ -24,7 +29,7 @@ use alloc::vec::Vec;
 #[cfg(feature = "alloc")]
 use pairing::MultiMillerLoop;
 
-#[cfg(feature = "rkyv-impl")]
+#[cfg(all(feature = "rkyv-impl", not(feature = "rkyv-semantic-validation")))]
 use bytecheck::CheckBytes;
 #[cfg(feature = "rkyv-impl")]
 use rkyv::{Archive, Deserialize as RkyvDeserialize, Serialize as RkyvSerialize};
@@ -34,9 +39,9 @@ use rkyv::{Archive, Deserialize as RkyvDeserialize, Serialize as RkyvSerialize};
 /// other until `.final_exponentiation()` is called, which is also expensive.
 #[cfg_attr(docsrs, doc(cfg(feature = "pairings")))]
 #[derive(Copy, Clone, Debug)]
+#[cfg_attr(feature = "rkyv-impl", derive(Archive, RkyvSerialize, RkyvDeserialize))]
 #[cfg_attr(
-    feature = "rkyv-impl",
-    derive(Archive, RkyvSerialize, RkyvDeserialize),
+    all(feature = "rkyv-impl", not(feature = "rkyv-semantic-validation")),
     archive_attr(derive(CheckBytes))
 )]
 pub struct MillerLoopResult(pub(crate) Fp12);
@@ -225,7 +230,10 @@ impl<'b> AddAssign<&'b MillerLoopResult> for MillerLoopResult {
 #[cfg_attr(docsrs, doc(cfg(feature = "pairings")))]
 #[derive(Copy, Clone, Debug)]
 #[cfg_attr(feature = "rkyv-impl", derive(Archive, RkyvDeserialize, RkyvSerialize))]
-#[cfg_attr(feature = "rkyv-impl", archive_attr(derive(CheckBytes)))]
+#[cfg_attr(
+    all(feature = "rkyv-impl", not(feature = "rkyv-semantic-validation")),
+    archive_attr(derive(CheckBytes))
+)]
 pub struct Gt(pub(crate) Fp12);
 
 impl Default for Gt {
@@ -509,13 +517,17 @@ impl Group for Gt {
 /// conjunction with the [`multi_miller_loop`](crate::multi_miller_loop)
 /// function provided by this crate.
 ///
+/// Prepared coefficients are not independently verifiable. Serde therefore
+/// supports serialization only; decode a checked [`G2Affine`] and reconstruct
+/// this type with [`G2Prepared::from`] at untrusted boundaries.
+///
 /// Requires the `alloc` and `pairing` crate features to be enabled.
 #[cfg(feature = "alloc")]
 #[cfg_attr(docsrs, doc(cfg(all(feature = "pairings", feature = "alloc"))))]
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "rkyv-impl", derive(Archive, RkyvSerialize, RkyvDeserialize))]
 #[cfg_attr(
-    feature = "rkyv-impl",
-    derive(Archive, RkyvSerialize, RkyvDeserialize),
+    all(feature = "rkyv-impl", not(feature = "rkyv-semantic-validation")),
     archive_attr(derive(CheckBytes))
 )]
 pub struct G2Prepared {

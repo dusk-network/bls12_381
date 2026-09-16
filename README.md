@@ -5,7 +5,7 @@
 > :warning: THIS CRATE IS A FORK OF [https://github.com/zkcrypto/bls12_381](https://github.com/zkcrypto/bls12_381/): The Dusk team has added a variety of tools required for its own uses on the top of the original library. You SHOULD NOT use this library unless you need a specific tool that we've implemented and is not available in the original.
 
 ## Extra tools added to [bls12_381](https://github.com/zkcrypto/bls12_381/) lib:
-- Add serde support for every single data structure in the crate that is exported.
+- Add serde support for exported values where their invariants can be preserved.
 - Add various multiscalar_mul algorithms.
 - Impl Iter Sum & Product for Scalar.
 - Implement hash for Scalar.
@@ -34,6 +34,30 @@ This crate provides an implementation of the BLS12-381 pairing-friendly elliptic
 * `experimental`: Enables experimental features. These features have no backwards-compatibility guarantees and may change at any time; users that depend on specific behaviour should pin an exact version of this crate. The current list of experimental features:
   * Hashing to curves ([Internet Draft v12](https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-12))
 * `parallel` (on by default): Enables `rayon` usage for highly parallelizable ops such as multiscalar multiplication.
+* `rkyv-impl`: Enables legacy-compatible RKYV archive and structural `CheckBytes` implementations.
+* `rkyv-validation`: Enables RKYV's generic structural checked-decoding infrastructure and standalone strict point archive helpers without changing the legacy `CheckBytes` policy.
+* `rkyv-semantic-validation` (off by default, **non-additive**): Applies semantic point validation recursively during generic checked RKYV decoding.
+  Cargo feature unification means that enabling it through any dependency on the
+  same resolved crate changes point-decoding acceptance and removes `CheckBytes`
+  from archived `G2Prepared`, `Gt` and `MillerLoopResult` for all consumers of that
+  crate instance. `default-features = false` cannot opt out of another dependency's
+  request.
+
+## Archive trust boundaries
+
+`rkyv-impl` supplies archive and structural `CheckBytes` implementations.
+`rkyv-validation` enables generic structural checked decoding and strict standalone
+point decoders. `rkyv-semantic-validation` adds process-wide recursive point
+validation and omits `CheckBytes` for unauthenticated pairing caches. Reconstruct
+those caches from checked source points.
+
+`rkyv-semantic-validation` is process-wide and cannot itself be activated at a
+protocol height. Consensus-sensitive applications that require versioned
+behavior should leave it disabled and apply semantic validation explicitly at
+their untrusted boundary, deriving any consensus-visible pricing before semantic
+rejection. Identity remains valid unless a protocol rejects it.
+
+Public Pippenger and variable-base MSM APIs are variable-time in their scalars.
 
 ## [Documentation](https://docs.rs/dusk-bls12_381)
 

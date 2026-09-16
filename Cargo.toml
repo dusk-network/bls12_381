@@ -120,4 +120,7 @@ nightly = ["subtle/nightly"]
 parallel = ["rayon"]
 rkyv-impl = ["rkyv", "rkyv/alloc", "bytecheck"]
 rkyv-validation = ["rkyv-impl", "rkyv/validation"]
+# Non-additive: feature unification changes point acceptance and removes CheckBytes
+# from archived G2Prepared, Gt and MillerLoopResult for all consumers of this crate.
+rkyv-semantic-validation = ["rkyv-validation"]
 serde = ["serde/alloc", "hex/alloc"]
