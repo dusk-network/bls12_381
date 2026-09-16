@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-09-16
+
 ### Added
 
 - Add strict `from_archive_bytes` decoders for `G1Affine`, `G1Projective`, `G2Affine` and `G2Projective` under `rkyv-validation` [#178].
@@ -16,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Gate `ArchivedG2Prepared` and `G2PreparedResolver` re-exports on `alloc` to fix builds without that feature [#181].
 - Panic before expansion on unsupported output sizes or overflowing length calculations in experimental hash-to-curve helpers [#184].
 - Decode fixed-size Serde hex values directly into stack buffers without copying borrowed strings or allocating decoded vectors [#184].
 - Reject non-canonical field and scalar representations during RKYV validation [#175]
@@ -295,6 +298,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <!-- Issues -->
 [#184]: https://github.com/dusk-network/bls12_381/issues/184
 [#183]: https://github.com/dusk-network/bls12_381/issues/183
+[#181]: https://github.com/dusk-network/bls12_381/pull/181
 [#178]: https://github.com/dusk-network/bls12_381/issues/178
 [#175]: https://github.com/dusk-network/bls12_381/issues/175
 [#3596]: https://github.com/dusk-network/rusk/issues/3596
@@ -329,7 +333,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [#50]: https://github.com/dusk-network/bls12_381/issues/50
 
 <!-- Versions -->
-[Unreleased]: https://github.com/dusk-network/bls12_381/compare/v0.14.2...HEAD
+[Unreleased]: https://github.com/dusk-network/bls12_381/compare/v0.15.0...HEAD
+[0.15.0]: https://github.com/dusk-network/bls12_381/compare/v0.14.2...v0.15.0
 [0.14.2]: https://github.com/dusk-network/bls12_381/compare/v0.14.1...v0.14.2
 [0.14.1]: https://github.com/dusk-network/bls12_381/compare/v0.14.0...v0.14.1
 [0.14.0]: https://github.com/dusk-network/bls12_381/compare/v0.13.0...v0.14.0
