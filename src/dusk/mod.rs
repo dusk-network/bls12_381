@@ -6,6 +6,9 @@
 
 pub(crate) mod choice;
 
+#[cfg(feature = "serde")]
+pub(crate) mod serde;
+
 #[cfg(feature = "rkyv-impl")]
 pub(crate) mod archive;
 

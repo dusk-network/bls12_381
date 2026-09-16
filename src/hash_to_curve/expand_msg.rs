@@ -93,6 +93,11 @@ pub trait InitExpandMessage<'x> {
     type Expander: ExpandMessageState<'x>;
 
     /// Initializes a message expander.
+    ///
+    /// # Panics
+    ///
+    /// The provided XOF and XMD expanders panic if `len_in_bytes` exceeds
+    /// 65535. XMD also rejects requests requiring more than 255 hash blocks.
     fn init_expand(message: &[u8], dst: &'x [u8], len_in_bytes: usize) -> Self::Expander;
 }
 
@@ -162,11 +167,13 @@ where
     type Expander = Self;
 
     fn init_expand(message: &[u8], dst: &[u8], len_in_bytes: usize) -> Self {
+        let encoded_len =
+            u16::try_from(len_in_bytes).expect("Invalid ExpandMsgXof usage: len_in_bytes > 65535");
         // Use U32 here for k = 128.
         let dst = ExpandMsgDst::<U32>::process_xof::<H>(dst);
         let hash = H::default()
             .chain(message)
-            .chain((len_in_bytes as u16).to_be_bytes())
+            .chain(encoded_len.to_be_bytes())
             .chain(dst.data())
             .chain([dst.len() as u8])
             .finalize_xof_dirty();
@@ -216,8 +223,10 @@ where
     type Expander = ExpandMsgXmdState<'x, H>;
 
     fn init_expand(message: &[u8], dst: &'x [u8], len_in_bytes: usize) -> Self::Expander {
+        let encoded_len =
+            u16::try_from(len_in_bytes).expect("Invalid ExpandMsgXmd usage: len_in_bytes > 65535");
         let hash_size = <H as Digest>::OutputSize::to_usize();
-        let ell = (len_in_bytes + hash_size - 1) / hash_size;
+        let ell = len_in_bytes.div_ceil(hash_size);
         if ell > 255 {
             panic!("Invalid ExpandMsgXmd usage: ell > 255");
         }
@@ -225,7 +234,7 @@ where
         let b_0 = H::new()
             .chain(GenericArray::<u8, <H as BlockInput>::BlockSize>::default())
             .chain(message)
-            .chain((len_in_bytes as u16).to_be_bytes())
+            .chain(encoded_len.to_be_bytes())
             .chain([0u8])
             .chain(dst.data())
             .chain([dst.len() as u8])

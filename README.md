@@ -58,6 +58,11 @@ their untrusted boundary, deriving any consensus-visible pricing before semantic
 rejection. Identity remains valid unless a protocol rejects it.
 
 Public Pippenger and variable-base MSM APIs are variable-time in their scalars.
+Scalar `Ord`/`PartialOrd` is also variable-time and orders internal Montgomery
+limbs, not mathematical values. Do not sort secret scalars or put them in ordered
+collections when timing or memory access is observable. For secret-scalar
+inversion, use `invert_ct` or `ff::Field::invert`, not the variable-time inherent
+`invert` method.
 
 ## [Documentation](https://docs.rs/dusk-bls12_381)
 

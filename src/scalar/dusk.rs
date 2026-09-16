@@ -93,12 +93,19 @@ mod rkyv_tests {
 /// The ordering is a consistent total order, which makes it suitable for
 /// data structures that require `Ord` (e.g. `BTreeSet`), but it must not
 /// be used for mathematical comparisons.
+///
+/// # Timing
+///
+/// `Ord` and `PartialOrd` are variable-time with respect to both operands.
+/// Do not use them, or ordering-based collections, for secret scalars when
+/// timing or memory access is observable.
 impl PartialOrd for Scalar {
     fn partial_cmp(&self, other: &Scalar) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
+/// Variable-time ordering of internal Montgomery limbs, not mathematical scalar values.
 impl Ord for Scalar {
     fn cmp(&self, other: &Self) -> Ordering {
         for i in (0..4).rev() {
@@ -133,8 +140,6 @@ impl Serializable<32> for Scalar {
 mod serde_support {
     extern crate alloc;
 
-    use alloc::string::{String, ToString};
-
     use serde::de::Error as SerdeError;
     use serde::{self, Deserialize, Deserializer, Serialize, Serializer};
 
@@ -149,15 +154,10 @@ mod serde_support {
 
     impl<'de> Deserialize<'de> for Scalar {
         fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-            let s = String::deserialize(deserializer)?;
-            let decoded = hex::decode(&s).map_err(SerdeError::custom)?;
-            let decoded_len = decoded.len();
-            let bytes: [u8; Scalar::SIZE] = decoded.try_into().map_err(|_| {
-                SerdeError::invalid_length(decoded_len, &Scalar::SIZE.to_string().as_str())
+            let bytes = crate::dusk::serde::deserialize_hex(deserializer)?;
+            let scalar = Option::from(Scalar::from_bytes(&bytes)).ok_or_else(|| {
+                SerdeError::custom("Failed to deserialize Scalar: invalid Scalar")
             })?;
-            let scalar = Option::from(Scalar::from_bytes(&bytes)).ok_or(SerdeError::custom(
-                "Failed to deserialize Scalar: invalid Scalar",
-            ))?;
             Ok(scalar)
         }
     }
