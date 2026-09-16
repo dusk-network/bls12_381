@@ -173,6 +173,76 @@ mod serde_support {
 }
 
 #[test]
+fn g2_affine_serializable_rejects_malformed_encodings() {
+    let from_bytes = <G2Affine as Serializable<96>>::from_bytes;
+    for point in [G2Affine::generator(), G2Affine::identity()] {
+        assert_eq!(from_bytes(&point.to_bytes()), Ok(point));
+    }
+
+    // Same affine point as g2::test_is_torsion_free.
+    let wrong_subgroup = G2Affine {
+        x: Fp2 {
+            c0: Fp::from_raw_unchecked([
+                0x89f5_50c8_13db_6431,
+                0xa50b_e8c4_56cd_8a1a,
+                0xa45b_3741_14ca_e851,
+                0xbb61_90f5_bf7f_ff63,
+                0x970c_a02c_3ba8_0bc7,
+                0x02b8_5d24_e840_fbac,
+            ]),
+            c1: Fp::from_raw_unchecked([
+                0x6888_bc53_d707_16dc,
+                0x3dea_6b41_1768_2d70,
+                0xd8f5_f930_500c_a354,
+                0x6b5e_cb65_56f5_c155,
+                0xc96b_ef04_3477_8ab0,
+                0x0508_1505_5150_06ad,
+            ]),
+        },
+        y: Fp2 {
+            c0: Fp::from_raw_unchecked([
+                0x3cf1_ea0d_434b_0f40,
+                0x1a0d_c610_e603_e333,
+                0x7f89_9561_60c7_2fa0,
+                0x25ee_03de_cf64_31c5,
+                0xeee8_e206_ec0f_e137,
+                0x0975_92b2_26df_ef28,
+            ]),
+            c1: Fp::from_raw_unchecked([
+                0x71e8_bb5f_2924_7367,
+                0xa5fe_049e_2118_31ce,
+                0x0ce6_b354_502a_3896,
+                0x93b0_1200_0997_314e,
+                0x6759_f3b6_aa5b_42ac,
+                0x1569_44c4_dfe9_2bbb,
+            ]),
+        },
+        infinity: 0u8.into(),
+    };
+    assert!(bool::from(wrong_subgroup.is_on_curve()));
+    assert!(!bool::from(wrong_subgroup.is_torsion_free()));
+    let wrong_subgroup_bytes = wrong_subgroup.to_compressed();
+    assert_eq!(
+        Option::<G2Affine>::from(G2Affine::from_compressed_unchecked(&wrong_subgroup_bytes)),
+        Some(wrong_subgroup)
+    );
+
+    let mut no_compression = G2Affine::generator().to_bytes();
+    no_compression[0] &= !0x80;
+    let mut nonzero_infinity = G2Affine::identity().to_bytes();
+    nonzero_infinity[95] = 1;
+
+    for (case, bytes) in [
+        ("cleared compression flag", no_compression),
+        ("infinity with nonzero x", nonzero_infinity),
+        ("all-zero buffer", [0; 96]),
+        ("point outside prime-order subgroup", wrong_subgroup_bytes),
+    ] {
+        assert_eq!(from_bytes(&bytes), Err(BytesError::InvalidData), "{case}");
+    }
+}
+
+#[test]
 fn g2_affine_bytes_unchecked() {
     let gen = G2Affine::generator();
     let ident = G2Affine::identity();
