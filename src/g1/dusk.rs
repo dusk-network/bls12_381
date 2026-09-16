@@ -190,6 +190,34 @@ fn g1_affine_serializable_rejects_malformed_encodings() {
         assert_eq!(from_bytes(&point.to_bytes()), Ok(point));
     }
 
+    // Same point as g1_affine_bytes_checked_reject_wrong_subgroup.
+    let wrong_subgroup = G1Affine {
+        x: Fp::from_raw_unchecked([
+            0x0aba_f895_b97e_43c8,
+            0xba4c_6432_eb9b_61b0,
+            0x1250_6f52_adfe_307f,
+            0x7502_8c34_3933_6b72,
+            0x8474_4f05_b8e9_bd71,
+            0x113d_554f_b095_54f7,
+        ]),
+        y: Fp::from_raw_unchecked([
+            0x73e9_0e88_f5cf_01c0,
+            0x3700_7b65_dd31_97e2,
+            0x5cf9_a199_2f0d_7c78,
+            0x4f83_c10b_9eb3_330d,
+            0xf6a6_3f6f_07f6_0961,
+            0x0c53_b5b9_7e63_4df3,
+        ]),
+        infinity: 0u8.into(),
+    };
+    assert!(bool::from(wrong_subgroup.is_on_curve()));
+    assert!(!bool::from(wrong_subgroup.is_torsion_free()));
+    let wrong_subgroup_bytes = wrong_subgroup.to_compressed();
+    assert_eq!(
+        Option::<G1Affine>::from(G1Affine::from_compressed_unchecked(&wrong_subgroup_bytes)),
+        Some(wrong_subgroup)
+    );
+
     let mut no_compression = G1Affine::generator().to_bytes();
     no_compression[0] &= !0x80;
     let mut nonzero_infinity = G1Affine::identity().to_bytes();
@@ -199,6 +227,7 @@ fn g1_affine_serializable_rejects_malformed_encodings() {
         ("cleared compression flag", no_compression),
         ("infinity with nonzero x", nonzero_infinity),
         ("all-zero buffer", [0; 48]),
+        ("point outside prime-order subgroup", wrong_subgroup_bytes),
     ] {
         assert_eq!(from_bytes(&bytes), Err(BytesError::InvalidData), "{case}");
     }
