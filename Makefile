@@ -4,6 +4,7 @@ help: ## Display this help screen
 test: ## Run tests (std + no_std)
 	@cargo test --all-features
 	@cargo test --no-default-features
+	@cargo test --test curve_boundaries --no-default-features --features groups,alloc
 	@cargo test --test archive_legacy --features rkyv-validation,rkyv/size_32
 	@cargo test --lib dusk::archive::points:: --features rkyv-semantic-validation,rkyv/size_32,rkyv/archive_be
 	@cargo test --lib dusk::archive::points:: --features rkyv-validation,rkyv/size_32,rkyv/archive_be
