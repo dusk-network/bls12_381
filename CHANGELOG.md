@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Reject unsupported experimental XOF/XMD output lengths and overflowing hash-to-field lengths before expansion [#184].
+- Panic before expansion on unsupported output sizes or overflowing length calculations in experimental hash-to-curve helpers [#184].
 - Decode fixed-size Serde hex values directly into stack buffers without copying borrowed strings or allocating decoded vectors [#184].
 - Reject non-canonical field and scalar representations during RKYV validation [#175]
 - Replace removed `CtOption::into_option` with `Option::from`
@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Use hex decoder errors for fixed-size Serde length mismatches [#184].
 - Document variable-time scalar inversion, ordering and multiscalar multiplication APIs [#184].
 - Make `pippenger` and `msm_variable_base` panic on insufficient bases [#183].
 - Delegate affine point serialization to the canonical compressed implementations [#155]

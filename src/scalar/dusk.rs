@@ -144,6 +144,7 @@ mod serde_support {
     use serde::{self, Deserialize, Deserializer, Serialize, Serializer};
 
     use super::*;
+    use crate::dusk::serde::deserialize_hex;
 
     impl Serialize for Scalar {
         fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
@@ -154,7 +155,7 @@ mod serde_support {
 
     impl<'de> Deserialize<'de> for Scalar {
         fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-            let bytes = crate::dusk::serde::deserialize_hex(deserializer)?;
+            let bytes = deserialize_hex(deserializer)?;
             let scalar = Option::from(Scalar::from_bytes(&bytes)).ok_or_else(|| {
                 SerdeError::custom("Failed to deserialize Scalar: invalid Scalar")
             })?;

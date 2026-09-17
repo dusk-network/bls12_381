@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 #![cfg(feature = "serde")]
 
 use std::alloc::{GlobalAlloc, Layout, System};
@@ -5,7 +9,9 @@ use std::cell::Cell;
 use std::fmt::Debug;
 
 use dusk_bls12_381::BlsScalar;
-use serde::de::value::{BorrowedBytesDeserializer, Error, StringDeserializer};
+use serde::de::value::{
+    BorrowedBytesDeserializer, BorrowedStrDeserializer, Error, StringDeserializer,
+};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
@@ -53,19 +59,22 @@ fn measured<T>(operation: impl FnOnce() -> T) -> (T, usize) {
 fn check<T: DeserializeOwned + Serialize + Debug + Eq>(value: T) {
     let json = serde_json::to_string(&value).unwrap();
     let hex = &json[1..json.len() - 1];
-    let (decoded, allocated) = measured(|| serde_json::from_str::<T>(&json));
+    let (decoded, allocated) =
+        measured(|| T::deserialize(BorrowedStrDeserializer::<Error>::new(hex)));
     assert_eq!(decoded.unwrap(), value);
     assert_eq!(allocated, 0, "valid borrowed hex must not allocate");
 
-    let oversized = format!("\"{}\"", "ab".repeat(512 * 1024));
-    let (decoded, allocated) = measured(|| serde_json::from_str::<T>(&oversized));
+    let oversized = "ab".repeat(512 * 1024);
+    let (decoded, allocated) =
+        measured(|| T::deserialize(BorrowedStrDeserializer::<Error>::new(&oversized)));
     assert!(decoded.is_err());
     assert!(
         allocated < 1024,
         "oversized hex was copied or decoded: {allocated}"
     );
 
-    // Preserve reader/owned/escaped strings and byte-backed string visitors.
+    // Preserve borrowed JSON, reader/owned/escaped strings and byte-backed visitors.
+    assert_eq!(serde_json::from_str::<T>(&json).unwrap(), value);
     assert_eq!(
         serde_json::from_reader::<_, T>(json.as_bytes()).unwrap(),
         value

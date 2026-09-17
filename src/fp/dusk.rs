@@ -119,6 +119,7 @@ mod serde_support {
     use serde::{self, Deserialize, Deserializer, Serialize, Serializer};
 
     use super::*;
+    use crate::dusk::serde::deserialize_hex;
 
     impl Serialize for Fp {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -135,7 +136,7 @@ mod serde_support {
         where
             D: Deserializer<'de>,
         {
-            let bytes = crate::dusk::serde::deserialize_hex(deserializer)?;
+            let bytes = deserialize_hex(deserializer)?;
             let fp = Option::from(Fp::from_bytes(&bytes))
                 .ok_or_else(|| SerdeError::custom("Failed to deserialize Fp: invalid Fp"))?;
             Ok(fp)

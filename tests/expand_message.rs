@@ -1,7 +1,11 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 #![cfg(feature = "experimental")]
 
 use dusk_bls12_381::hash_to_curve::{
-    ExpandMessage, ExpandMessageState, ExpandMsgXmd, ExpandMsgXof, HashToField, InitExpandMessage,
+    ExpandMessage, ExpandMessageState, ExpandMsgXmd, ExpandMsgXof, HashToField,
 };
 use sha2::{Sha256, Sha512};
 #[allow(deprecated)] // The experimental HashToField trait uses digest 0.9's GenericArray.
@@ -38,32 +42,41 @@ fn supported_lengths_preserve_streaming() {
     check_stream::<ExpandMsgXmd<Sha512>>(255 * 64);
 }
 
+fn check_length_panic<X: ExpandMessage>(len: usize, expected: &str) {
+    let panic = std::panic::catch_unwind(|| {
+        X::init_expand(b"message", b"DST", len);
+    })
+    .expect_err("unsupported expansion length must panic");
+    let message = panic
+        .downcast_ref::<&str>()
+        .copied()
+        .or_else(|| panic.downcast_ref::<String>().map(String::as_str))
+        .expect("panic payload must be a string");
+    assert!(
+        message.contains(expected),
+        "expected panic containing {expected:?}, got {message:?}"
+    );
+}
+
 #[test]
 fn xof_rejects_unsupported_lengths() {
     for len in [65536, 65568, usize::MAX] {
-        assert!(std::panic::catch_unwind(|| {
-            ExpandMsgXof::<Shake128>::init_expand(b"message", b"DST", len)
-        })
-        .is_err());
-        assert!(std::panic::catch_unwind(|| {
-            ExpandMsgXof::<Shake256>::init_expand(b"message", b"DST", len)
-        })
-        .is_err());
+        let expected = "Invalid ExpandMsgXof usage: len_in_bytes > 65535";
+        check_length_panic::<ExpandMsgXof<Shake128>>(len, expected);
+        check_length_panic::<ExpandMsgXof<Shake256>>(len, expected);
     }
 }
 
 #[test]
 fn xmd_rejects_unsupported_lengths_without_wrapping() {
-    for len in [255 * 32 + 1, 65536, usize::MAX] {
-        assert!(std::panic::catch_unwind(|| {
-            ExpandMsgXmd::<Sha256>::init_expand(b"message", b"DST", len)
-        })
-        .is_err());
+    for len in [65536, usize::MAX] {
+        check_length_panic::<ExpandMsgXmd<Sha256>>(
+            len,
+            "Invalid ExpandMsgXmd usage: len_in_bytes > 65535",
+        );
     }
-    assert!(std::panic::catch_unwind(|| {
-        ExpandMsgXmd::<Sha512>::init_expand(b"message", b"DST", 255 * 64 + 1)
-    })
-    .is_err());
+    check_length_panic::<ExpandMsgXmd<Sha256>>(255 * 32 + 1, "ell > 255");
+    check_length_panic::<ExpandMsgXmd<Sha512>>(255 * 64 + 1, "ell > 255");
 }
 
 #[test]
