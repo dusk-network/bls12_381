@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Panic before expansion on unsupported output sizes or overflowing length calculations in experimental hash-to-curve helpers [#184].
+- Decode fixed-size Serde hex values directly into stack buffers without copying borrowed strings or allocating decoded vectors [#184].
 - Reject non-canonical field and scalar representations during RKYV validation [#175]
 - Replace removed `CtOption::into_option` with `Option::from`
 - Reject non-boolean values in `Choice` wrapper (`From<u8>` masks input, `Serializable::from_bytes` and rkyv `CheckBytes` reject values other than 0/1)
@@ -23,7 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Document variable-time scalar inversion and multiscalar multiplication APIs.
+- Use hex decoder errors for fixed-size Serde length mismatches [#184].
+- Document variable-time scalar inversion, ordering and multiscalar multiplication APIs [#184].
 - Make `pippenger` and `msm_variable_base` panic on insufficient bases [#183].
 - Delegate affine point serialization to the canonical compressed implementations [#155]
 - Replace `byteorder` with native little-endian conversion and remove its feature
@@ -290,6 +293,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Rename `S` to `TWO_ADACITY` and export it
 
 <!-- Issues -->
+[#184]: https://github.com/dusk-network/bls12_381/issues/184
 [#183]: https://github.com/dusk-network/bls12_381/issues/183
 [#178]: https://github.com/dusk-network/bls12_381/issues/178
 [#175]: https://github.com/dusk-network/bls12_381/issues/175

@@ -115,12 +115,11 @@ mod rkyv_tests {
 mod serde_support {
     extern crate alloc;
 
-    use alloc::string::{String, ToString};
-
     use serde::de::Error as SerdeError;
     use serde::{self, Deserialize, Deserializer, Serialize, Serializer};
 
     use super::*;
+    use crate::dusk::serde::deserialize_hex;
 
     impl Serialize for Fp {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -137,15 +136,9 @@ mod serde_support {
         where
             D: Deserializer<'de>,
         {
-            let s = String::deserialize(deserializer)?;
-            let decoded = hex::decode(&s).map_err(SerdeError::custom)?;
-            let decoded_len = decoded.len();
-            const FP_BYTES_LEN: usize = 48;
-            let bytes: [u8; FP_BYTES_LEN] = decoded.try_into().map_err(|_| {
-                SerdeError::invalid_length(decoded_len, &FP_BYTES_LEN.to_string().as_str())
-            })?;
+            let bytes = deserialize_hex(deserializer)?;
             let fp = Option::from(Fp::from_bytes(&bytes))
-                .ok_or(SerdeError::custom("Failed to deserialize Fp: invalid Fp"))?;
+                .ok_or_else(|| SerdeError::custom("Failed to deserialize Fp: invalid Fp"))?;
             Ok(fp)
         }
     }

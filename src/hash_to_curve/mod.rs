@@ -41,9 +41,16 @@ pub trait HashToField: Sized {
     /// Implements [section 5.3 of `draft-irtf-cfrg-hash-to-curve-12`][hash_to_field].
     ///
     /// [hash_to_field]: https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-12#section-5.3
+    ///
+    /// # Panics
+    ///
+    /// Panics if the output byte length overflows `usize` or is unsupported by `X`.
     fn hash_to_field<X: ExpandMessage>(message: &[u8], dst: &[u8], output: &mut [Self]) {
         let len_per_elm = Self::InputLength::to_usize();
-        let len_in_bytes = output.len() * len_per_elm;
+        let len_in_bytes = output
+            .len()
+            .checked_mul(len_per_elm)
+            .expect("hash_to_field output length overflows usize");
         let mut expander = X::init_expand(message, dst, len_in_bytes);
 
         let mut buf = GenericArray::<u8, Self::InputLength>::default();

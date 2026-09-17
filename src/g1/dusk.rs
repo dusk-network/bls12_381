@@ -140,12 +140,12 @@ mod serde_support {
     extern crate alloc;
 
     use alloc::format;
-    use alloc::string::{String, ToString};
 
     use serde::de::Error as SerdeError;
     use serde::{self, Deserialize, Deserializer, Serialize, Serializer};
 
     use super::*;
+    use crate::dusk::serde::deserialize_hex;
 
     impl Serialize for G1Affine {
         fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
@@ -156,12 +156,7 @@ mod serde_support {
 
     impl<'de> Deserialize<'de> for G1Affine {
         fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-            let s = String::deserialize(deserializer)?;
-            let decoded = hex::decode(&s).map_err(SerdeError::custom)?;
-            let decoded_len = decoded.len();
-            let bytes: [u8; G1Affine::SIZE] = decoded.try_into().map_err(|_| {
-                SerdeError::invalid_length(decoded_len, &G1Affine::SIZE.to_string().as_str())
-            })?;
+            let bytes = deserialize_hex(deserializer)?;
             let affine = G1Affine::from_bytes(&bytes)
                 .map_err(|err| SerdeError::custom(format!("{err:?}")))?;
             Ok(affine)
