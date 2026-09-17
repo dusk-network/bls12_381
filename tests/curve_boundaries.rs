@@ -48,7 +48,7 @@ fn uncompressed_boundaries<G: PrimeCurveAffine + UncompressedEncoding>() {
     assert!(bool::from(G::from_uncompressed(&off_curve).is_none()));
 
     // Find an on-curve non-subgroup point through the separate compressed API.
-    let torsion = (0..16)
+    let torsion = (0..=u8::MAX)
         .find_map(|x| {
             let mut bytes = G::Repr::default();
             bytes.as_mut()[0] = 0x80;
