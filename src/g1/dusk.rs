@@ -186,7 +186,7 @@ mod serde_support {
         fn serde_g1_affine_too_short_encoded() {
             let length_47_enc = "\"97f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6\"";
 
-            let g1_affine: Result<G1Affine, _> = serde_json::from_str(&length_47_enc);
+            let g1_affine: Result<G1Affine, _> = serde_json::from_str(length_47_enc);
             assert!(g1_affine.is_err());
         }
 
@@ -194,7 +194,7 @@ mod serde_support {
         fn serde_g1_affine_too_long_encoded() {
             let length_49_enc = "\"97f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb00\"";
 
-            let g1_affine: Result<G1Affine, _> = serde_json::from_str(&length_49_enc);
+            let g1_affine: Result<G1Affine, _> = serde_json::from_str(length_49_enc);
             assert!(g1_affine.is_err());
         }
     }
