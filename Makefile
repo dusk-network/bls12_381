@@ -4,6 +4,7 @@ help: ## Display this help screen
 test: ## Run tests (std + no_std)
 	@cargo test --all-features
 	@cargo test --no-default-features
+	@cargo test --no-default-features --features groups,serde --lib
 	@cargo test --test curve_boundaries --no-default-features --features groups,alloc
 	@cargo test --test archive_legacy --features rkyv-validation,rkyv/size_32
 	@cargo test --lib dusk::archive::points:: --features rkyv-semantic-validation,rkyv/size_32,rkyv/archive_be
@@ -11,9 +12,13 @@ test: ## Run tests (std + no_std)
 	@cargo test --test archive_points --features rkyv-validation,rkyv/size_32,rkyv/archive_be
 
 clippy: ## Run clippy
-	@cargo clippy --features rkyv-semantic-validation,rkyv/size_32,serde,nightly -- -D warnings
-	@cargo clippy --features rkyv-validation,rkyv/size_32,serde,nightly -- -D warnings
-	@cargo clippy --no-default-features -- -D warnings
+	@cargo clippy --tests --features rkyv-semantic-validation,rkyv/size_32,serde,nightly -- -D warnings
+	@cargo clippy --tests --features rkyv-validation,rkyv/size_32,serde,nightly -- -D warnings
+	@cargo clippy --tests --no-default-features -- -D warnings
+	@cargo clippy --tests --no-default-features --features groups,serde -- -D warnings
+
+ci: ## Run all CI checks
+	@$(MAKE) -k cq test no-std
 
 cq: ## Run code quality checks (formatting + clippy)
 	@$(MAKE) fmt CHECK=1
@@ -40,4 +45,4 @@ no-std: ## Verify no_std + WASM compatibility
 	@cargo build --release --no-default-features --features serde --target wasm32-unknown-unknown
 	@cargo check --target wasm32-unknown-unknown --no-default-features --features groups,pairings,alloc,rkyv-semantic-validation,rkyv/size_32
 
-.PHONY: help test clippy cq fmt check doc clean test-no-std no-std
+.PHONY: help test clippy ci cq fmt check doc clean test-no-std no-std

@@ -1183,7 +1183,7 @@ fn test_squaring() {
 
 #[test]
 fn test_inversion() {
-    assert!(bool::from(Scalar::zero().invert().is_none()));
+    assert!(Scalar::zero().invert().is_none());
     assert_eq!(Scalar::one().invert().unwrap(), Scalar::one());
     assert_eq!((-&Scalar::one()).invert().unwrap(), -&Scalar::one());
 

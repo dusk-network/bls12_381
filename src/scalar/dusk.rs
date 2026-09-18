@@ -445,7 +445,7 @@ mod tests {
         let a = Scalar::from(500u64);
         let b = Scalar::from(499u64);
         let res = Scalar::from(7u64);
-        assert_eq!(&a ^ &b, res);
+        assert_eq!(BitXor::bitxor(&a, &b), res);
     }
 
     #[test]
@@ -453,20 +453,20 @@ mod tests {
         let a = Scalar::one();
         let b = Scalar::one();
         let res = Scalar::one();
-        assert_eq!(&a & &b, res);
+        assert_eq!(BitAnd::bitand(&a, &b), res);
         assert_eq!(a & -a, Scalar::zero());
     }
 
     #[test]
     fn test_iter_sum() {
-        let scalars = vec![Scalar::one(), Scalar::one()];
+        let scalars = [Scalar::one(), Scalar::one()];
         let res: Scalar = scalars.iter().sum();
         assert_eq!(res, Scalar::one() + Scalar::one());
     }
 
     #[test]
     fn test_iter_prod() {
-        let scalars = vec![Scalar::one() + Scalar::one(), Scalar::one() + Scalar::one()];
+        let scalars = [Scalar::one() + Scalar::one(), Scalar::one() + Scalar::one()];
         let res: Scalar = scalars.iter().product();
         assert_eq!(res, Scalar::from(4u64));
     }

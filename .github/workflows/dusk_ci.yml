@@ -7,20 +7,8 @@ on:
 name: Continuous integration
 
 jobs:
-  code-quality:
-    name: Code quality
+  ci:
+    name: CI
     uses: dusk-network/.github/.github/workflows/run-make.yml@main
     with:
-      make_target: cq
-
-  test:
-    name: Run tests
-    uses: dusk-network/.github/.github/workflows/run-make.yml@main
-    with:
-      make_target: test
-
-  no-std:
-    name: Run no-std checks
-    uses: dusk-network/.github/.github/workflows/run-make.yml@main
-    with:
-      make_target: no-std
+      make_target: ci

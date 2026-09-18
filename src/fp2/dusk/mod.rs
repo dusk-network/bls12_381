@@ -76,7 +76,7 @@ mod serde_support {
 
     #[cfg(test)]
     mod tests {
-        use alloc::boxed::Box;
+        use std::boxed::Box;
 
         use rand::rngs::StdRng;
         use rand_core::SeedableRng;
