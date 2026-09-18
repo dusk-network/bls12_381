@@ -8,6 +8,8 @@ use super::Fp6;
 
 #[cfg(feature = "serde")]
 mod serde_support {
+    extern crate alloc;
+
     use serde::de::{Error as SerdeError, MapAccess, Visitor};
     use serde::ser::SerializeStruct;
     use serde::{self, Deserialize, Deserializer, Serialize, Serializer};
@@ -88,12 +90,17 @@ mod serde_support {
         use rand_core::SeedableRng;
 
         use super::*;
-        use crate::dusk::test_utils;
+        use crate::{dusk::test_utils, fp2::Fp2};
 
         #[test]
         fn serde_fp6() -> Result<(), Box<dyn std::error::Error>> {
             let mut rng = StdRng::seed_from_u64(0xc0b);
-            let fp6 = Fp6::random(&mut rng);
+            // Preserve the fixture without the pairings-only Fp6::random helper.
+            let fp6 = Fp6 {
+                c0: Fp2::random(&mut rng),
+                c1: Fp2::random(&mut rng),
+                c2: Fp2::random(&mut rng),
+            };
             let ser = test_utils::assert_canonical_json(&fp6, include_str!("./fp6.json"))?;
             let deser: Fp6 = serde_json::from_str(&ser).unwrap();
 
