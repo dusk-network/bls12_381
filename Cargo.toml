@@ -22,6 +22,7 @@ exclude = [
 ]
 
 [package.metadata.docs.rs]
+features = ["hash-to-curve"]
 rustdoc-args = [ "--html-in-header", "katex-header.html" ]
 
 [dev-dependencies]
@@ -43,7 +44,7 @@ required-features = ["groups"]
 [[bench]]
 name = "hash_to_curve"
 harness = false
-required-features = ["experimental"]
+required-features = ["hash-to-curve"]
 
 [dependencies.digest]
 version = "0.9"
@@ -114,7 +115,8 @@ bits = ["ff/bits"]
 groups = ["group"]
 pairings = ["groups", "pairing"]
 alloc = ["group/alloc"]
-experimental = ["digest"]
+hash-to-curve = ["digest", "groups"]
+experimental = ["hash-to-curve"]
 nightly = ["subtle/nightly"]
 # Features added by Dusk
 parallel = ["rayon"]

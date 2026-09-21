@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add the opt-in `hash-to-curve` feature with the crate's normal API compatibility guarantees [#192].
+
+### Changed
+
+- Make `experimental` an alias for `hash-to-curve` [#192].
+
+### Fixed
+
+- Fix `experimental` builds that do not also enable `groups` [#192].
+
 ## [0.15.0] - 2026-09-16
 
 ### Added
@@ -296,6 +308,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Rename `S` to `TWO_ADACITY` and export it
 
 <!-- Issues -->
+[#192]: https://github.com/dusk-network/bls12_381/issues/192
 [#184]: https://github.com/dusk-network/bls12_381/issues/184
 [#183]: https://github.com/dusk-network/bls12_381/issues/183
 [#181]: https://github.com/dusk-network/bls12_381/pull/181
