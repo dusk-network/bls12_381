@@ -372,9 +372,9 @@ mod tests {
             let scalars = &scalars[0..n];
             let points = &points[0..n];
             let control: G1Projective = premultiplied[0..n].iter().sum();
-            let subject = pippenger(points.to_vec().into_iter(), scalars.to_vec().into_iter());
+            let subject = pippenger(points.iter().copied(), scalars.iter().copied());
             assert_eq!(subject, control);
-            n = n / 2;
+            n /= 2;
         }
     }
 
@@ -487,21 +487,21 @@ mod tests {
         assert_eq!(
             try_pippenger(
                 core::iter::empty(),
-                core::iter::repeat(Scalar::one()).take(usize::MAX),
+                core::iter::repeat_n(Scalar::one(), usize::MAX),
             ),
             Err(InsufficientBases)
         );
         assert_eq!(
             try_pippenger(
                 core::iter::from_fn(|| None::<G1Projective>),
-                core::iter::repeat(Scalar::one()).take(usize::MAX),
+                core::iter::repeat_n(Scalar::one(), usize::MAX),
             ),
             Err(InsufficientBases)
         );
         assert_eq!(
             try_pippenger(
-                core::iter::repeat(G1Projective::identity()).take(usize::MAX - 1),
-                core::iter::repeat(Scalar::one()).take(usize::MAX),
+                core::iter::repeat_n(G1Projective::identity(), usize::MAX - 1),
+                core::iter::repeat_n(Scalar::one(), usize::MAX),
             ),
             Err(InsufficientBases)
         );

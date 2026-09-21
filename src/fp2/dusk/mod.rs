@@ -8,6 +8,8 @@ use super::Fp2;
 
 #[cfg(feature = "serde")]
 mod serde_support {
+    extern crate alloc;
+
     use serde::de::{Error as SerdeError, MapAccess, Visitor};
     use serde::ser::SerializeStruct;
     use serde::{self, Deserialize, Deserializer, Serialize, Serializer};

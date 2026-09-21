@@ -1792,15 +1792,15 @@ fn test_commutative_scalar_subgroup_multiplication() {
     let g1_a = G1Affine::generator();
     let g1_p = G1Projective::generator();
 
-    // By reference.
-    assert_eq!(&g1_a * &a, &a * &g1_a);
-    assert_eq!(&g1_p * &a, &a * &g1_p);
+    // Explicit trait calls keep the borrowed implementations under test.
+    assert_eq!(Mul::mul(&g1_a, &a), Mul::mul(&a, &g1_a));
+    assert_eq!(Mul::mul(&g1_p, &a), Mul::mul(&a, &g1_p));
 
     // Mixed
-    assert_eq!(&g1_a * a.clone(), a.clone() * &g1_a);
-    assert_eq!(&g1_p * a.clone(), a.clone() * &g1_p);
-    assert_eq!(g1_a.clone() * &a, &a * g1_a.clone());
-    assert_eq!(g1_p.clone() * &a, &a * g1_p.clone());
+    assert_eq!(Mul::mul(&g1_a, a), Mul::mul(a, &g1_a));
+    assert_eq!(Mul::mul(&g1_p, a), Mul::mul(a, &g1_p));
+    assert_eq!(Mul::mul(g1_a, &a), Mul::mul(&a, g1_a));
+    assert_eq!(Mul::mul(g1_p, &a), Mul::mul(&a, g1_p));
 
     // By value.
     assert_eq!(g1_p * a, a * g1_p);
