@@ -538,9 +538,9 @@ impl Sgn0 for Fp {
 
 /// Maps an element of [`Fp`] to a point on iso-G1.
 ///
-/// Implements [section 6.6.2 of `draft-irtf-cfrg-hash-to-curve-12`][sswu].
+/// Implements [section 6.6.2 of RFC 9380][sswu].
 ///
-/// [sswu]: https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-12#section-6.6.2
+/// [sswu]: https://www.rfc-editor.org/rfc/rfc9380.html#section-6.6.2
 fn map_to_curve_simple_swu(u: &Fp) -> G1Projective {
     let usq = u.square();
     let xi_usq = SSWU_XI * usq;
@@ -841,7 +841,7 @@ fn test_encode_to_curve_10() {
 
     for case in cases {
         let g = <G1Projective as HashToCurve<ExpandMsgXmd<sha2::Sha256>>>::encode_to_curve(
-            &case.msg, DOMAIN,
+            case.msg, DOMAIN,
         );
         let aff = G1Affine::from(g);
         let g_uncompressed = aff.to_uncompressed();
@@ -922,7 +922,7 @@ fn test_hash_to_curve_10() {
 
     for case in cases {
         let g = <G1Projective as HashToCurve<ExpandMsgXmd<sha2::Sha256>>>::hash_to_curve(
-            &case.msg, DOMAIN,
+            case.msg, DOMAIN,
         );
         let g_uncompressed = G1Affine::from(g).to_uncompressed();
 
@@ -943,14 +943,14 @@ pub const P_M1_OVER2: Fp = Fp::from_raw_unchecked([
 
 #[test]
 fn test_sgn0() {
-    assert_eq!(bool::from(Fp::zero().sgn0()), false);
-    assert_eq!(bool::from(Fp::one().sgn0()), true);
-    assert_eq!(bool::from((-Fp::one()).sgn0()), false);
-    assert_eq!(bool::from((-Fp::zero()).sgn0()), false);
-    assert_eq!(bool::from(P_M1_OVER2.sgn0()), true);
+    assert!(!bool::from(Fp::zero().sgn0()));
+    assert!(bool::from(Fp::one().sgn0()));
+    assert!(!bool::from((-Fp::one()).sgn0()));
+    assert!(!bool::from((-Fp::zero()).sgn0()));
+    assert!(bool::from(P_M1_OVER2.sgn0()));
 
     let p_p1_over2 = P_M1_OVER2 + Fp::one();
-    assert_eq!(bool::from(p_p1_over2.sgn0()), false);
+    assert!(!bool::from(p_p1_over2.sgn0()));
 
     let neg_p_p1_over2 = {
         let mut tmp = p_p1_over2;

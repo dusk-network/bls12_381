@@ -31,8 +31,8 @@ This crate provides an implementation of the BLS12-381 pairing-friendly elliptic
 * `pairings` (on by default): Enables some APIs for performing pairings.
 * `alloc` (on by default): Enables APIs that require an allocator; these include pairing optimizations.
 * `nightly`: Enables `subtle/nightly`, which tries to prevent compiler optimizations that could jeopardize constant time operations. Requires the nightly Rust compiler.
-* `experimental`: Enables experimental features. These features have no backwards-compatibility guarantees and may change at any time; users that depend on specific behaviour should pin an exact version of this crate. The current list of experimental features:
-  * Hashing to curves ([Internet Draft v12](https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-12))
+* `hash-to-curve` (off by default): Enables the `hash_to_curve` module and its `digest` and `groups` dependencies; follows the crate's normal semantic-versioning compatibility policy.
+* `experimental`: Compatibility alias for `hash-to-curve`, with the same compatibility guarantees.
 * `parallel` (on by default): Enables `rayon` usage for highly parallelizable ops such as multiscalar multiplication.
 * `rkyv-impl`: Enables legacy-compatible RKYV archive and structural `CheckBytes` implementations.
 * `rkyv-validation`: Enables RKYV's generic structural checked-decoding infrastructure and standalone strict point archive helpers without changing the legacy `CheckBytes` policy.
@@ -42,6 +42,31 @@ This crate provides an implementation of the BLS12-381 pairing-friendly elliptic
   from archived `G2Prepared`, `Gt` and `MillerLoopResult` for all consumers of that
   crate instance. `default-features = false` cannot opt out of another dependency's
   request.
+
+## Hashing to curves
+
+With `hash-to-curve` (or its existing `experimental` alias),
+`HashToCurve<ExpandMsgXmd<sha2::Sha256>>` provides the BLS12-381 G1/G2
+random-oracle (`hash_to_curve`) and nonuniform (`encode_to_curve`) suites from
+[RFC 9380, sections 8.8.1 and 8.8.2](https://www.rfc-editor.org/rfc/rfc9380.html#section-8.8).
+Regression tests cover the final RFC's curve and expansion vectors, including
+intermediate field elements and mapped points. Vector agreement is not a
+cryptographic audit.
+
+The existing API types, digest 0.9 dependency, hash outputs and panic behavior
+are unchanged. `HashToField` retains digest 0.9's `GenericArray` types.
+`ExpandMsgXof<H>` retains `k = 128`, **including with SHAKE256**: DSTs longer
+than 255 bytes are hashed to 32 bytes, not the 64 bytes required for `k = 256`.
+Using a different digest does not automatically select a different security
+parameter or define an RFC BLS12-381 suite.
+
+Callers must supply a nonempty, application-distinct domain separation tag
+(DST), as required by [RFC 9380 section 3.1](https://www.rfc-editor.org/rfc/rfc9380.html#section-3.1);
+at least 16 bytes is recommended. These caller requirements are not enforced
+by the API. Preserve existing protocol tags when enabling either feature name.
+`encode_to_curve` is nonuniform and must not replace `hash_to_curve` where a
+random oracle is required. Neither feature is enabled by default, and neither
+requires the Rust standard library or the crate's `alloc` feature.
 
 ## Archive trust boundaries
 

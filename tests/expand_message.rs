@@ -2,13 +2,13 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-#![cfg(feature = "experimental")]
+#![cfg(any(feature = "hash-to-curve", feature = "experimental"))]
 
 use dusk_bls12_381::hash_to_curve::{
     ExpandMessage, ExpandMessageState, ExpandMsgXmd, ExpandMsgXof, HashToField,
 };
 use sha2::{Sha256, Sha512};
-#[allow(deprecated)] // The experimental HashToField trait uses digest 0.9's GenericArray.
+#[allow(deprecated)] // The HashToField API retains digest 0.9's GenericArray.
 use sha3::digest::generic_array::{typenum::U64, GenericArray};
 use sha3::{Shake128, Shake256};
 
@@ -81,7 +81,7 @@ fn xmd_rejects_unsupported_lengths_without_wrapping() {
 
 #[test]
 #[should_panic(expected = "hash_to_field output length overflows usize")]
-#[allow(deprecated)]
+#[allow(deprecated)] // Exercise the existing GenericArray-based HashToField API.
 fn hash_to_field_rejects_length_overflow_before_expansion() {
     // A zero-sized field exercises the length arithmetic without a huge allocation.
     #[derive(Clone, Copy)]

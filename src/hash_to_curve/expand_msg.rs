@@ -1,6 +1,6 @@
-//! This module implements message expansion consistent with the
-//! hash-to-curve RFC drafts 7 through 10
+//! Message expansion from RFC 9380 section 5.3.
 
+// Preserve the existing borrowed digest inputs without changing this implementation.
 #![allow(clippy::needless_borrows_for_generic_args)]
 
 use core::{
@@ -22,9 +22,9 @@ const OVERSIZE_DST_SALT: &[u8] = b"H2C-OVERSIZE-DST-";
 
 /// The domain separation tag for a message expansion.
 ///
-/// Implements [section 5.4.3 of `draft-irtf-cfrg-hash-to-curve-12`][dst].
+/// Implements [section 5.3.3 of RFC 9380][dst].
 ///
-/// [dst]: https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-12#section-5.4.3
+/// [dst]: https://www.rfc-editor.org/rfc/rfc9380.html#section-5.3.3
 #[derive(Debug)]
 enum ExpandMsgDst<'x, L: ArrayLength<u8>> {
     /// DST produced by hashing a very long (> 255 chars) input DST.
@@ -83,8 +83,7 @@ impl<'x, L: ArrayLength<u8>> ExpandMsgDst<'x, L> {
 
 /// A trait for message expansion methods supported by hash-to-curve.
 pub trait ExpandMessage: for<'x> InitExpandMessage<'x> {
-    // This intermediate is likely only necessary until GATs allow
-    // associated types with lifetimes.
+    // Keep this blanket trait and InitExpandMessage as part of the existing API.
 }
 
 /// Trait for constructing a new message expander.
@@ -93,6 +92,8 @@ pub trait InitExpandMessage<'x> {
     type Expander: ExpandMessageState<'x>;
 
     /// Initializes a message expander.
+    ///
+    /// The caller must satisfy the module's domain separation requirements.
     ///
     /// # Panics
     ///
@@ -127,10 +128,11 @@ pub trait ExpandMessageState<'x> {
 /// A generator for the output of `expand_message_xof` for a given
 /// extendable hash function, message, DST, and output length.
 ///
-/// Implements [section 5.4.2 of `draft-irtf-cfrg-hash-to-curve-12`][expand_message_xof]
-/// with `k = 128`.
+/// Implements [section 5.3.2 of RFC 9380][expand_message_xof]
+/// with fixed `k = 128`, including when `H` is SHAKE256. DSTs longer than
+/// 255 bytes are hashed to 32 bytes; this is not the `k = 256` construction.
 ///
-/// [expand_message_xof]: https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-12#section-5.4.2
+/// [expand_message_xof]: https://www.rfc-editor.org/rfc/rfc9380.html#section-5.3.2
 pub struct ExpandMsgXof<H: ExtendableOutputDirty> {
     hash: <H as ExtendableOutputDirty>::Reader,
     remain: usize,
@@ -187,18 +189,18 @@ where
 /// Constructor for `expand_message_xmd` for a given digest hash function, message, DST,
 /// and output length.
 ///
-/// Implements [section 5.4.1 of `draft-irtf-cfrg-hash-to-curve-12`][expand_message_xmd].
+/// Implements [section 5.3.1 of RFC 9380][expand_message_xmd].
 ///
-/// [expand_message_xmd]: https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-12#section-5.4.1
+/// [expand_message_xmd]: https://www.rfc-editor.org/rfc/rfc9380.html#section-5.3.1
 #[derive(Debug)]
 pub struct ExpandMsgXmd<H: Digest>(PhantomData<H>);
 
 /// A generator for the output of `expand_message_xmd` for a given
 /// digest hash function, message, DST, and output length.
 ///
-/// Implements [section 5.4.1 of `draft-irtf-cfrg-hash-to-curve-12`][expand_message_xmd].
+/// Implements [section 5.3.1 of RFC 9380][expand_message_xmd].
 ///
-/// [expand_message_xmd]: https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-12#section-5.4.1
+/// [expand_message_xmd]: https://www.rfc-editor.org/rfc/rfc9380.html#section-5.3.1
 pub struct ExpandMsgXmdState<'x, H: Digest> {
     dst: ExpandMsgDst<'x, H::OutputSize>,
     b_0: GenericArray<u8, H::OutputSize>,

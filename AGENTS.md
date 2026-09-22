@@ -11,9 +11,10 @@ BLS12-381 pairing-friendly elliptic curve implementation. **Fork of
 zkcrypto/bls12_381** with Dusk-specific enhancements (multiscalar
 multiplication, serde, rkyv, hash-to-scalar, bitwise ops).
 
-All Dusk additions are scoped inside `dusk` submodules (e.g. `src/dusk/`,
-`src/scalar/dusk.rs`, `src/g1/dusk.rs`). Do not modify the upstream
-zkcrypto code directly.
+Dusk additions are scoped inside `dusk` submodules (e.g. `src/dusk/`,
+`src/scalar/dusk.rs`, `src/g1/dusk.rs`). The `src/hash_to_curve/` module and
+its feature gates are maintained fork exceptions. Do not modify other
+upstream zkcrypto code directly.
 
 ## Commands
 
@@ -26,7 +27,7 @@ make doc       # Generate docs
 make no-std    # Verify no_std + WASM compatibility
 make clean     # Clean build artifacts
 cargo bench --bench groups --features groups        # Group benchmarks
-cargo bench --bench hash_to_curve --features experimental  # Hash-to-curve benchmarks
+cargo bench --bench hash_to_curve --features hash-to-curve  # Hash-to-curve benchmarks
 ```
 
 ## Architecture
@@ -47,7 +48,7 @@ cargo bench --bench hash_to_curve --features experimental  # Hash-to-curve bench
 | `src/scalar/dusk.rs` | Dusk-specific scalar ops (serde, Ord, bitwise, hash-to-scalar) |
 | `src/g1/dusk.rs` | Dusk-specific G1 ops (serde, rkyv) |
 | `src/g2/dusk.rs` | Dusk-specific G2 ops (serde, rkyv) |
-| `src/hash_to_curve/` | Hash-to-curve (RFC draft v12) |
+| `src/hash_to_curve/` | Hash-to-curve (RFC 9380, BLS12-381 XMD/SHA-256 suites) |
 
 ### Key Types
 
@@ -65,16 +66,20 @@ cargo bench --bench hash_to_curve --features experimental  # Hash-to-curve bench
 - `alloc` — allocator-dependent APIs
 - `bits` — bit operations on field elements
 - `parallel` — rayon multiscalar multiplication
-- `experimental` — hash-to-curve
+- `hash-to-curve` — opt-in hash-to-curve; enables `digest` and `groups`
+- `experimental` — compatibility alias for `hash-to-curve`
 - `rkyv-impl` — rkyv zero-copy serialization
 - `serde` — serde support
 
 ## Conventions
 
 - **no_std by default**: the crate is `no_std`. Do not add `std` dependencies.
-- **Dusk submodule scoping**: all Dusk additions go in `dusk` submodules
-  (`src/dusk/`, `src/scalar/dusk.rs`, `src/g1/dusk.rs`, `src/g2/dusk.rs`).
-  Never modify upstream zkcrypto code.
+- **Dusk submodule scoping**: Dusk additions go in `dusk` submodules
+  (`src/dusk/`, `src/scalar/dusk.rs`, `src/g1/dusk.rs`, `src/g2/dusk.rs`),
+  except for `src/hash_to_curve/` and its feature gates.
+- **Upstream hash-to-curve imports**: translate upstream `experimental` gates
+  to `hash-to-curve`, including in `src/lib.rs` and `src/fp2.rs`. The
+  compatibility alias enables `hash-to-curve`, not the other way around.
 - **No timing side-channels**: do not introduce branches or early returns on
   secret data. Use constant-time operations.
 - **Montgomery form**: `Scalar` values are stored in Montgomery form. The

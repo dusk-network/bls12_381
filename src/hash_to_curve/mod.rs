@@ -1,5 +1,19 @@
-//! This module implements hash_to_curve, hash_to_field and related
-//! hashing primitives for use with BLS signatures.
+//! Hash-to-curve and related hashing primitives from [RFC 9380].
+//!
+//! Enabled by `hash-to-curve`, or its compatibility alias `experimental`.
+//! The existing public API, including digest 0.9's `GenericArray` types,
+//! follows the crate's normal semantic-versioning compatibility policy.
+//!
+//! With [`ExpandMsgXmd`] and SHA-256, G1/G2 implement the BLS12-381 suites
+//! in RFC 9380 sections 8.8.1 and 8.8.2. [`HashToCurve::hash_to_curve`] is
+//! uniform; [`HashToCurve::encode_to_curve`] is nonuniform.
+//! [`ExpandMsgXof`] uses a fixed `k = 128`, even with SHAKE256.
+//!
+//! Callers must supply a nonempty, application-distinct domain separation
+//! tag (`dst`); RFC 9380 section 3.1 recommends at least 16 bytes. These
+//! requirements are not checked by the API. Preserve existing protocol tags.
+//!
+//! [RFC 9380]: https://www.rfc-editor.org/rfc/rfc9380.html
 
 use core::ops::Add;
 
@@ -20,9 +34,9 @@ use crate::generic_array::{typenum::Unsigned, ArrayLength, GenericArray};
 
 /// Enables a byte string to be hashed into one or more field elements for a given curve.
 ///
-/// Implements [section 5 of `draft-irtf-cfrg-hash-to-curve-12`][hash_to_field].
+/// Implements [section 5.2 of RFC 9380][hash_to_field].
 ///
-/// [hash_to_field]: https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-12#section-5
+/// [hash_to_field]: https://www.rfc-editor.org/rfc/rfc9380.html#section-5.2
 pub trait HashToField: Sized {
     /// The length of the data used to produce an individual field element.
     ///
@@ -38,9 +52,10 @@ pub trait HashToField: Sized {
     /// Hashes a byte string of arbitrary length into one or more elements of `Self`,
     /// using [`ExpandMessage`] variant `X`.
     ///
-    /// Implements [section 5.3 of `draft-irtf-cfrg-hash-to-curve-12`][hash_to_field].
+    /// Implements [section 5.2 of RFC 9380][hash_to_field].
+    /// The caller must satisfy the module's domain separation requirements.
     ///
-    /// [hash_to_field]: https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-12#section-5.3
+    /// [hash_to_field]: https://www.rfc-editor.org/rfc/rfc9380.html#section-5.2
     ///
     /// # Panics
     ///
@@ -78,7 +93,8 @@ pub trait HashToCurve<X: ExpandMessage>: MapToCurve + for<'a> Add<&'a Self, Outp
     /// Implements a uniform encoding from byte strings to elements of `Self`.
     ///
     /// This function is suitable for most applications requiring a random
-    /// oracle returning points in `Self`.
+    /// oracle returning points in `Self`. The caller must satisfy the module's
+    /// domain separation requirements.
     fn hash_to_curve(message: impl AsRef<[u8]>, dst: &[u8]) -> Self {
         let mut u = [Self::Field::default(); 2];
         Self::Field::hash_to_field::<X>(message.as_ref(), dst, &mut u);
@@ -92,10 +108,11 @@ pub trait HashToCurve<X: ExpandMessage>: MapToCurve + for<'a> Add<&'a Self, Outp
     /// The distribution of its output is not uniformly random in `Self`: the set of
     /// possible outputs of this function is only a fraction of the points in `Self`, and
     /// some elements of this set are more likely to be output than others. See
-    /// [section 10.1 of `draft-irtf-cfrg-hash-to-curve-12`][encode_to_curve-distribution]
+    /// [section 10.4 of RFC 9380][encode_to_curve-distribution]
     /// for a more precise definition of `encode_to_curve`'s output distribution.
+    /// The caller must satisfy the module's domain separation requirements.
     ///
-    /// [encode_to_curve-distribution]: https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-12#section-10.1
+    /// [encode_to_curve-distribution]: https://www.rfc-editor.org/rfc/rfc9380.html#section-10.4
     fn encode_to_curve(message: impl AsRef<[u8]>, dst: &[u8]) -> Self {
         let mut u = [Self::Field::default(); 1];
         Self::Field::hash_to_field::<X>(message.as_ref(), dst, &mut u);
@@ -114,7 +131,7 @@ where
 pub(crate) trait Sgn0 {
     /// Returns either 0 or 1 indicating the "sign" of x, where sgn0(x) == 1
     /// just when x is "negative". (In other words, this function always considers 0 to be positive.)
-    /// <https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-10#section-4.1>
+    /// <https://www.rfc-editor.org/rfc/rfc9380.html#section-4.1>
     /// The equivalent for draft 6 would be `lexicographically_largest`.
     fn sgn0(&self) -> Choice;
 }
