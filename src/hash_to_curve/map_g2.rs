@@ -426,6 +426,8 @@ fn map_to_curve_simple_swu(u: &Fp2) -> G2Projective {
         c1: -tmp.c0,
     };
     y.conditional_assign(&tmp, (tmp.square() * gx_den).ct_eq(&gx0_num));
+    // y is a square root of g(x0(u)) if any candidate matched
+    let gx0_square = (y.square() * gx_den).ct_eq(&gx0_num);
 
     // compute g(x1(u)) = g(x0(u)) * XI^3 * u^6
     let gx1_num = gx0_num * xi_usq * xisq_u4;
@@ -434,7 +436,8 @@ fn map_to_curve_simple_swu(u: &Fp2) -> G2Projective {
     let mut eta_found = Choice::from(0u8);
     for eta in &SSWU_ETAS[..] {
         let tmp = sqrt_candidate * eta;
-        let found = (tmp.square() * gx_den).ct_eq(&gx1_num);
+        // use x1(u) only if g(x0(u)) is not square; for u = 0 both are square
+        let found = (tmp.square() * gx_den).ct_eq(&gx1_num) & !gx0_square;
         y.conditional_assign(&tmp, found);
         eta_found |= found;
     }
@@ -481,11 +484,13 @@ fn iso_map(u: &G2Projective) -> G2Projective {
     mapvals[2] *= y;
     mapvals[3] *= z;
 
-    G2Projective {
+    let out = G2Projective {
         x: mapvals[0] * mapvals[3], // xnum * yden,
         y: mapvals[2] * mapvals[1], // ynum * xden,
         z: mapvals[1] * mapvals[3], // xden * yden
-    }
+    };
+    // RFC 9380 6.6.3: kernel points map to the identity, not to (0 : 0 : 0)
+    G2Projective::conditional_select(&out, &G2Projective::identity(), out.z.is_zero())
 }
 
 impl MapToCurve for G2Projective {
@@ -525,6 +530,51 @@ fn test_osswu_semirandom() {
         let p_iso = iso_map(&p);
         assert!(bool::from(p_iso.is_on_curve()));
     }
+}
+
+#[test]
+fn test_map_to_curve_zero() {
+    use crate::g2::G2Affine;
+
+    // RFC 9380 6.6.2: g(x0(0)) is square (Appendix H.2), so u = 0 maps via x0.
+    let u = Fp2::zero();
+    assert!(check_g2_prime(&map_to_curve_simple_swu(&u)));
+    let p = <G2Projective as MapToCurve>::map_to_curve(&u);
+    assert!(bool::from(p.is_on_curve()));
+
+    // map_to_curve(0) from arkworks, and blst_map_to_g2(0) after clear_h
+    let expected = concat!(
+        "0869822666fe850cb93dfd4fa64ebd9ef77ba62b5c12055eadb6e7cc8972f64e01c4577d3d52456c26867647f5366519",
+        "0cdfcc9523305c43ef59a4e347cb3fc76688c60b05bafebd445a65901b5dd40644e21d35dcbe50a95955e4f8e24fbe6f",
+        "065e5e02c722a33da7500bf914cd37b6ae4c530530023c13383ea7dab34ef1b27b68998c349dd210d2750562202c71e7",
+        "136014e0bc7e1c8bef4d313f2f3a7cc51544b6d101062dd048421cdcc08687f3e8118ba0ca5d5605cc66966b893e89da",
+    );
+    assert_eq!(hex::encode(G2Affine::from(p).to_uncompressed()), expected);
+    let expected = concat!(
+        "0a67d12118b5a35bb02d2e86b3ebfa7e23410db93de39fb06d7025fa95e96ffa428a7a27c3ae4dd4b40bd251ac658892",
+        "018320896ec9eef9d5e619848dc29ce266f413d02dd31d9b9d44ec0c79cd61f18b075ddba6d7bd20b7ff27a4b324bfce",
+        "04c69777a43f0bda07679d5805e63f18cf4e0e7c6112ac7f70266d199b4f76ae27c6269a3ceebdae30806e9a76aadf5c",
+        "0260e03644d1a2c321256b3246bad2b895cad13890cbe6f85df55106a0d334604fb143c7a042d878006271865bc35941",
+    );
+    assert_eq!(
+        hex::encode(G2Affine::from(p.clear_h()).to_uncompressed()),
+        expected
+    );
+}
+
+#[test]
+fn test_iso_map_kernel() {
+    // x_den = (x - k)^2 vanishes on the kernel of the 3-isogeny. Kernel
+    // points are not defined over Fp2, so SSWU never reaches this case.
+    let k = -ISO3_XDEN[1] * (Fp2::one() + Fp2::one()).invert().unwrap();
+    assert_eq!(k.square() + ISO3_XDEN[1] * k + ISO3_XDEN[0], Fp2::zero());
+    let p = iso_map(&G2Projective {
+        x: k,
+        y: Fp2::one(),
+        z: Fp2::one(),
+    });
+    let g = G2Projective::generator();
+    assert_eq!(p + g, g);
 }
 
 // test vectors from the draft 10 RFC

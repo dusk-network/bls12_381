@@ -616,11 +616,13 @@ fn iso_map(u: &G1Projective) -> G1Projective {
     mapvals[2] *= y;
     mapvals[3] *= z;
 
-    G1Projective {
+    let out = G1Projective {
         x: mapvals[0] * mapvals[3], // xnum * yden,
         y: mapvals[2] * mapvals[1], // ynum * xden,
         z: mapvals[1] * mapvals[3], // xden * yden
-    }
+    };
+    // RFC 9380 6.6.3: kernel points map to the identity, not to (0 : 0 : 0)
+    G1Projective::conditional_select(&out, &G1Projective::identity(), out.z.is_zero())
 }
 
 impl MapToCurve for G1Projective {
