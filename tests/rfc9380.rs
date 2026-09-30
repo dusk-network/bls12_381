@@ -116,6 +116,74 @@ curve_vectors!(
     "BLS12381G2_XMD:SHA-256_SSWU_NU_.json"
 );
 
+/// Expander whose output is the message, so tests can choose each `u`.
+struct PassThrough;
+
+struct PassThroughState(Vec<u8>);
+
+impl InitExpandMessage<'_> for PassThrough {
+    type Expander = PassThroughState;
+
+    fn init_expand(message: &[u8], _dst: &[u8], len_in_bytes: usize) -> PassThroughState {
+        assert_eq!(message.len(), len_in_bytes);
+        PassThroughState(message.to_vec())
+    }
+}
+
+impl ExpandMessageState<'_> for PassThroughState {
+    fn read_into(&mut self, output: &mut [u8]) -> usize {
+        let len = output.len().min(self.0.len());
+        output[..len].copy_from_slice(&self.0[..len]);
+        self.0.drain(..len);
+        len
+    }
+
+    fn remain(&self) -> usize {
+        self.0.len()
+    }
+}
+
+/// The `u` whose simplified SWU image lies in the kernel of the G1 11-isogeny.
+const G1_KERNEL_U: [&str; 16] = [
+    "598c1367bbd9d3b73dfefb263a117bcdbcb4c7a282897d4a20589ad2ea80da73b23a465e2c291e7ef0fde593438f513",
+    "998e1e079710a43d477d37ab7f0c430d601a85b9e8e6dbc808410dfd7dc5a5976e3bc7792cb83163665df3d00f0377c",
+    "a92437e90bc473049ab549b4c4a145feb4fb5cd39f7ee85c11fa62a8f5317220b398be420ca5d8364d460f6ee1efd29",
+    "b3f3f9519ff3ab349e4ffc214f99998a697b02358fcfe44830e29129f58d6f9154a23fd14dfa660a75d4aaec9b607c3",
+    "ec1d2551f80abe70136a7f42e52133ebddf9b619a88147ae422a98e57581f2b0961dc019c74599f12a1b5513649a2e8",
+    "f6ece6ba8c39f6a0170531af7019877792795b7b98d2439a6112c76675ddf021372741a9089a27c552a9f0911e0ad82",
+    "10683009c00edc5676a3d43b8b5ae8a68e75a32954f6a502e6acc1c11ed49bcaa7c843871e887ce9839920c2ff0f732f",
+    "146850b3bdc2495ed73bb803dfaa951a88abff0acb5c7aeac52b48f3c808e87ce3885b98ce916e17caef21a6cbc6b598",
+    "68951d10be6961019aa800a51cf48b707fc9e40700510406be9242d0c8dd866afdec0d66f9dc2cf1dc944702ec161bb",
+    "854a3cb180882d5b1efc1c3cc5b3fb33b27cb739f1389986ca46e1c5cb5010d8a06fd781c63074868f316d95b8f8405",
+    "a2605e5991fcf3e63728a7a1468d79bacaa5f23f3816aadcd38efdd330c6d4f5bbf450f92156e0e23e16e3252bcd042",
+    "a3bf00221e169b850c5268c3d1edd576732060760bc0c00ed0311dee8588b18130822d3027f8d142802d784ea194fca",
+    "fc521e8179e7ce1fa56812a062ccf7ffd45457d92c906be7a2dc0c20e586b0c0ba3dd2baed472eb91fc287b15e65ae1",
+    "fdb0c04a060175be7a91d3c2ee2d53bb7ccec610003a81199f7e2c3c3a488d4c2ecbaef1f3e91f1961d91cdad42da69",
+    "11ac6e1f217763c4992be5f276f06d24294f801154718926fa8c648499fbf51694a5028694f0f8b7510be926a47026a6",
+    "1377c0192d99508a317127abf17c64205c7aad448380027efb47ae73ea231dbd6ecd3f2841b63d309c35bb8fd13e48f0",
+];
+
+#[test]
+fn g1_isogeny_kernel_maps_to_identity() {
+    // 64-byte OKM that reduces to `u`
+    let okm = |u: &str| [vec![0; 16], field_bytes(u)].concat();
+    let v = okm("1234");
+    let other = <G1Projective as HashToCurve<PassThrough>>::encode_to_curve(&v, b"");
+    let g = G1Projective::generator();
+    for u in G1_KERNEL_U.map(okm) {
+        let mut field = [Default::default()];
+        HashToField::hash_to_field::<PassThrough>(&u, b"", &mut field);
+        let p = <G1Projective as MapToCurve>::map_to_curve(&field[0]);
+        assert!(bool::from(p.is_identity()));
+        assert_eq!(p + g, g);
+        // RFC 9380 6.6.3: only the other half contributes to hash_to_curve
+        for msg in [[&u[..], &v].concat(), [&v[..], &u].concat()] {
+            let h = <G1Projective as HashToCurve<PassThrough>>::hash_to_curve(msg, b"");
+            assert_eq!(h, other);
+        }
+    }
+}
+
 fn check_expansion<X: ExpandMessage>(msg: &[u8], dst: &[u8], expected: &[u8]) {
     let mut direct = X::init_expand(msg, dst, expected.len());
     assert_eq!(direct.remain(), expected.len());

@@ -484,11 +484,13 @@ fn iso_map(u: &G2Projective) -> G2Projective {
     mapvals[2] *= y;
     mapvals[3] *= z;
 
-    G2Projective {
+    let out = G2Projective {
         x: mapvals[0] * mapvals[3], // xnum * yden,
         y: mapvals[2] * mapvals[1], // ynum * xden,
         z: mapvals[1] * mapvals[3], // xden * yden
-    }
+    };
+    // RFC 9380 6.6.3: kernel points map to the identity, not to (0 : 0 : 0)
+    G2Projective::conditional_select(&out, &G2Projective::identity(), out.z.is_zero())
 }
 
 impl MapToCurve for G2Projective {
@@ -558,6 +560,21 @@ fn test_map_to_curve_zero() {
         hex::encode(G2Affine::from(p.clear_h()).to_uncompressed()),
         expected
     );
+}
+
+#[test]
+fn test_iso_map_kernel() {
+    // x_den = (x - k)^2 vanishes on the kernel of the 3-isogeny. Kernel
+    // points are not defined over Fp2, so SSWU never reaches this case.
+    let k = -ISO3_XDEN[1] * (Fp2::one() + Fp2::one()).invert().unwrap();
+    assert_eq!(k.square() + ISO3_XDEN[1] * k + ISO3_XDEN[0], Fp2::zero());
+    let p = iso_map(&G2Projective {
+        x: k,
+        y: Fp2::one(),
+        z: Fp2::one(),
+    });
+    let g = G2Projective::generator();
+    assert_eq!(p + g, g);
 }
 
 // test vectors from the draft 10 RFC
