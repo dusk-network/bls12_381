@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Fix `experimental` builds that do not also enable `groups` [#192].
+- Map `u = 0` to the RFC 9380 point in G2 `map_to_curve` instead of a point off the curve [#194].
 
 ## [0.15.0] - 2026-09-16
 
@@ -308,6 +309,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Rename `S` to `TWO_ADACITY` and export it
 
 <!-- Issues -->
+[#194]: https://github.com/dusk-network/bls12_381/issues/194
 [#192]: https://github.com/dusk-network/bls12_381/issues/192
 [#184]: https://github.com/dusk-network/bls12_381/issues/184
 [#183]: https://github.com/dusk-network/bls12_381/issues/183
