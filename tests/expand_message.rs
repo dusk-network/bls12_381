@@ -5,11 +5,15 @@
 #![cfg(any(feature = "hash-to-curve", feature = "experimental"))]
 
 use dusk_bls12_381::hash_to_curve::{
-    ExpandMessage, ExpandMessageState, ExpandMsgXmd, ExpandMsgXof, HashToField,
+    ExpandMessage, ExpandMessageState, ExpandMsgXmd, ExpandMsgXof, HashToField, InitExpandMessage,
 };
 use sha2::{Sha256, Sha512};
 #[allow(deprecated)] // The HashToField API retains digest 0.9's GenericArray.
-use sha3::digest::generic_array::{typenum::U64, GenericArray};
+use sha3::digest::generic_array::{
+    typenum::{U256, U64},
+    GenericArray,
+};
+use sha3::digest::{BlockInput, FixedOutputDirty, Reset, Update};
 use sha3::{Shake128, Shake256};
 
 fn check_stream<X: ExpandMessage>(len: usize) {
@@ -77,6 +81,30 @@ fn xmd_rejects_unsupported_lengths_without_wrapping() {
     }
     check_length_panic::<ExpandMsgXmd<Sha256>>(255 * 32 + 1, "ell > 255");
     check_length_panic::<ExpandMsgXmd<Sha512>>(255 * 64 + 1, "ell > 255");
+}
+
+#[test]
+#[should_panic(expected = "Invalid ExpandMsgXmd usage: processed DST length > 255")]
+#[allow(deprecated)] // digest 0.9 traits use GenericArray.
+fn xmd_rejects_unencodable_oversize_dst() {
+    // The hashed DST of a 256-byte digest has no 1-byte length encoding.
+    #[derive(Clone, Default)]
+    struct WideHash;
+    impl Update for WideHash {
+        fn update(&mut self, _: impl AsRef<[u8]>) {}
+    }
+    impl FixedOutputDirty for WideHash {
+        type OutputSize = U256;
+        fn finalize_into_dirty(&mut self, _: &mut GenericArray<u8, U256>) {}
+    }
+    impl Reset for WideHash {
+        fn reset(&mut self) {}
+    }
+    impl BlockInput for WideHash {
+        type BlockSize = U256;
+    }
+
+    ExpandMsgXmd::<WideHash>::init_expand(b"message", &[0x42; 256], 64);
 }
 
 #[test]
