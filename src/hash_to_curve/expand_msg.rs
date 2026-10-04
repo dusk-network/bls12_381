@@ -98,7 +98,8 @@ pub trait InitExpandMessage<'x> {
     /// # Panics
     ///
     /// The provided XOF and XMD expanders panic if `len_in_bytes` exceeds
-    /// 65535. XMD also rejects requests requiring more than 255 hash blocks.
+    /// 65535. XMD also rejects requests requiring more than 255 hash blocks,
+    /// and DSTs longer than 255 bytes when the hash output exceeds 255 bytes.
     fn init_expand(message: &[u8], dst: &'x [u8], len_in_bytes: usize) -> Self::Expander;
 }
 
@@ -231,6 +232,10 @@ where
         let ell = len_in_bytes.div_ceil(hash_size);
         if ell > 255 {
             panic!("Invalid ExpandMsgXmd usage: ell > 255");
+        }
+        // A hashed DST has `hash_size` bytes, which must fit its 1-byte length.
+        if hash_size > 255 && dst.len() > 255 {
+            panic!("Invalid ExpandMsgXmd usage: processed DST length > 255");
         }
         let dst = ExpandMsgDst::process_xmd::<H>(dst);
         let b_0 = H::new()
