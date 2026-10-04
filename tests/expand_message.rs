@@ -83,28 +83,33 @@ fn xmd_rejects_unsupported_lengths_without_wrapping() {
     check_length_panic::<ExpandMsgXmd<Sha512>>(255 * 64 + 1, "ell > 255");
 }
 
+/// A digest wider than 255 bytes, so a hashed DST has no 1-byte length.
+#[derive(Clone, Default)]
+struct WideHash;
+impl Update for WideHash {
+    fn update(&mut self, _: impl AsRef<[u8]>) {}
+}
+#[allow(deprecated)] // digest 0.9 traits use GenericArray.
+impl FixedOutputDirty for WideHash {
+    type OutputSize = U256;
+    fn finalize_into_dirty(&mut self, _: &mut GenericArray<u8, U256>) {}
+}
+impl Reset for WideHash {
+    fn reset(&mut self) {}
+}
+impl BlockInput for WideHash {
+    type BlockSize = U256;
+}
+
 #[test]
 #[should_panic(expected = "Invalid ExpandMsgXmd usage: processed DST length > 255")]
-#[allow(deprecated)] // digest 0.9 traits use GenericArray.
 fn xmd_rejects_unencodable_oversize_dst() {
-    // The hashed DST of a 256-byte digest has no 1-byte length encoding.
-    #[derive(Clone, Default)]
-    struct WideHash;
-    impl Update for WideHash {
-        fn update(&mut self, _: impl AsRef<[u8]>) {}
-    }
-    impl FixedOutputDirty for WideHash {
-        type OutputSize = U256;
-        fn finalize_into_dirty(&mut self, _: &mut GenericArray<u8, U256>) {}
-    }
-    impl Reset for WideHash {
-        fn reset(&mut self) {}
-    }
-    impl BlockInput for WideHash {
-        type BlockSize = U256;
-    }
-
     ExpandMsgXmd::<WideHash>::init_expand(b"message", &[0x42; 256], 64);
+}
+
+#[test]
+fn xmd_expands_wide_digest_with_short_dst() {
+    ExpandMsgXmd::<WideHash>::init_expand(b"message", &[0x42; 255], 64);
 }
 
 #[test]
