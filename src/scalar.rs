@@ -27,7 +27,7 @@ use rkyv::{Archive, Deserialize as RkyvDeserialize, Serialize as RkyvSerialize};
 // Montgomery form; i.e., Scalar(a) = aR mod q, with R = 2^256.
 #[derive(Clone, Copy, Eq)]
 #[cfg_attr(feature = "rkyv-impl", derive(Archive, RkyvSerialize, RkyvDeserialize))]
-pub struct Scalar(pub [u64; 4]);
+pub struct Scalar(pub(crate) [u64; 4]);
 
 impl fmt::Debug for Scalar {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

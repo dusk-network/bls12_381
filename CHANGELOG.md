@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Make `experimental` an alias for `hash-to-curve` [#192].
+- Make the limbs of `Scalar` and `ArchivedBlsScalar` crate-private [#198].
 
 ### Fixed
 
@@ -311,6 +312,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Rename `S` to `TWO_ADACITY` and export it
 
 <!-- Issues -->
+[#198]: https://github.com/dusk-network/bls12_381/issues/198
 [#196]: https://github.com/dusk-network/bls12_381/issues/196
 [#194]: https://github.com/dusk-network/bls12_381/issues/194
 [#192]: https://github.com/dusk-network/bls12_381/issues/192
