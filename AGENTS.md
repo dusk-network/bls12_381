@@ -13,8 +13,10 @@ multiplication, serde, rkyv, hash-to-scalar, bitwise ops).
 
 Dusk additions are scoped inside `dusk` submodules (e.g. `src/dusk/`,
 `src/scalar/dusk.rs`, `src/g1/dusk.rs`). The `src/hash_to_curve/` module and
-its feature gates are maintained fork exceptions. Do not modify other
-upstream zkcrypto code directly.
+its feature gates are maintained fork exceptions, and so are the zero result
+that replaces upstream's panic in `MillerLoopResult::final_exponentiation` and
+the `Gt` comparison that never matches it (#194). Do not modify other upstream
+zkcrypto code directly.
 
 ## Commands
 

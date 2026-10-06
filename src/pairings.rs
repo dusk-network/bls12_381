@@ -66,6 +66,14 @@ impl MillerLoopResult {
     /// of a Miller loop into an element of `Gt` with help of efficient squaring
     /// operation in the so-called `cyclotomic subgroup` of `Fq6` so that
     /// it can be compared with other elements of `Gt`.
+    ///
+    /// A zero Miller loop result has no inverse. It comes from G2 points
+    /// outside the prime-order subgroup, which only unchecked decoding
+    /// accepts, or from zeroed archived values. For it this returns a zero
+    /// `Gt` instead of panicking. That value is not a group element and
+    /// compares unequal to every `Gt`, itself included, so equality checks
+    /// over it fail. Checks that accept on inequality do not; decode G2
+    /// points with the checked constructors to rule it out.
     pub fn final_exponentiation(&self) -> Gt {
         #[must_use]
         fn fp4_square(a: Fp2, b: Fp2) -> (Fp2, Fp2) {
@@ -190,10 +198,12 @@ impl MillerLoopResult {
 
                 f
             })
-            // We unwrap() because `MillerLoopResult` can only be constructed
-            // by a function within this crate, and we uphold the invariant
-            // that the enclosed value is nonzero.
-            .unwrap())
+            // Dusk: a zero Miller loop result has no inverse. G2 points outside
+            // the prime-order subgroup, such as order-13 points from unchecked
+            // decoding, and zeroed archived values produce one. Return zero
+            // instead of panicking: a zero `Gt` never compares equal, so
+            // equality checks fail.
+            .unwrap_or(Fp12::zero()))
     }
 }
 
@@ -227,6 +237,10 @@ impl<'b> AddAssign<&'b MillerLoopResult> for MillerLoopResult {
 ///
 /// Typically, $\mathbb{G}_T$ is written multiplicatively but we will write it additively to
 /// keep code and abstractions consistent.
+///
+/// A failed [`MillerLoopResult::final_exponentiation`] returns zero, which is not a group
+/// element. It compares unequal to every value, itself included, so it never passes an
+/// equality check.
 #[cfg_attr(docsrs, doc(cfg(feature = "pairings")))]
 #[derive(Copy, Clone, Debug)]
 #[cfg_attr(feature = "rkyv-impl", derive(Archive, RkyvDeserialize, RkyvSerialize))]
@@ -253,7 +267,10 @@ impl fmt::Display for Gt {
 
 impl ConstantTimeEq for Gt {
     fn ct_eq(&self, other: &Self) -> Choice {
-        self.0.ct_eq(&other.0)
+        // Dusk: zero is not a group element. A failed final exponentiation
+        // or a zeroed archived value produces it. It never equals any value,
+        // itself included, so comparing two failed pairings fails as well.
+        self.0.ct_eq(&other.0) & !self.0.ct_eq(&Fp12::zero())
     }
 }
 

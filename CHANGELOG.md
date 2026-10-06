@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Make `experimental` an alias for `hash-to-curve` [#192].
+- Make a zero `Gt` compare unequal to every `Gt`, itself included [#194].
 - Make the limbs of `Scalar` and `ArchivedBlsScalar` crate-private [#198].
 
 ### Fixed
@@ -21,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix `experimental` builds that do not also enable `groups` [#192].
 - Map `u = 0` to the RFC 9380 point in G2 `map_to_curve` instead of a point off the curve [#194].
 - Map isogeny kernel points to the identity in `map_to_curve` instead of `(0 : 0 : 0)` [#194].
+- Return a zero `Gt` instead of panicking in `MillerLoopResult::final_exponentiation` [#194].
 - Panic in `ExpandMsgXmd` on DSTs longer than 255 bytes when the hash output exceeds 255 bytes, instead of encoding a wrapped DST length [#196].
 
 ## [0.15.0] - 2026-09-16
