@@ -164,3 +164,53 @@ fn g2_prepared_bytes_unchecked() {
 
     assert_eq!(g2_prepared.coeffs, g2_prepared_p.coeffs);
 }
+
+/// Compressed order-13 point on the G2 curve, outside the prime-order subgroup.
+#[cfg(test)]
+const ORDER_13_G2: &str = "b155337267dcdc648fb817356e8e9e26e0c729e5543bc72a0424741f956d341eb560f91e5c8ff5ed896391e6a2e9b028109965b41eafc380c9cafca101976929bd74ecdb031d1dd345e76d904fd528d70f882714e49a4a10efefb2aadfd0b1ba";
+
+#[test]
+fn zero_miller_loop_result_fails_closed() {
+    use crate::fp12::Fp12;
+    use crate::{Gt, MillerLoopResult};
+
+    let gt = MillerLoopResult(Fp12::zero()).final_exponentiation();
+    assert_eq!(gt.0, Fp12::zero());
+    assert_ne!(gt, Gt::identity());
+
+    // Zero is not a group element and never equals any value, even zero.
+    let other = MillerLoopResult(Fp12::zero()).final_exponentiation();
+    assert_ne!(gt, other);
+}
+
+#[test]
+fn order_13_g2_point_fails_closed() {
+    use crate::fp12::Fp12;
+    use crate::{multi_miller_loop, pairing, BlsScalar, G1Affine, G2Affine, G2Projective, Gt};
+
+    let bytes: [u8; 96] = hex::decode(ORDER_13_G2).unwrap().try_into().unwrap();
+    assert!(bool::from(G2Affine::from_compressed(&bytes).is_none()));
+    let q = G2Affine::from_compressed_unchecked(&bytes).unwrap();
+    assert!(!bool::from(q.is_identity()));
+    assert_eq!(
+        G2Projective::from(q) * BlsScalar::from(13u64),
+        G2Projective::identity()
+    );
+
+    let p = G1Affine::generator();
+    let gt = pairing(&p, &q);
+    assert_eq!(gt.0, Fp12::zero());
+    assert_ne!(gt, Gt::identity());
+
+    // Two failed pairings with different G1 inputs must not compare equal.
+    let p2 = G1Affine::from(G1Affine::generator() * BlsScalar::from(2u64));
+    assert_ne!(gt, pairing(&p2, &q));
+
+    // A verification-style check e(p, g2) * e(-p, q) == 1 must fail, not panic.
+    let check = multi_miller_loop(&[
+        (&p, &G2Prepared::from(G2Affine::generator())),
+        (&-p, &G2Prepared::from(q)),
+    ])
+    .final_exponentiation();
+    assert_ne!(check, Gt::identity());
+}
