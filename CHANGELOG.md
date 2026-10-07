@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-10-07
+
 ### Added
 
 - Add the opt-in `hash-to-curve` feature with the crate's normal API compatibility guarantees [#192].
@@ -355,7 +357,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [#50]: https://github.com/dusk-network/bls12_381/issues/50
 
 <!-- Versions -->
-[Unreleased]: https://github.com/dusk-network/bls12_381/compare/v0.15.0...HEAD
+[Unreleased]: https://github.com/dusk-network/bls12_381/compare/v0.16.0...HEAD
+[0.16.0]: https://github.com/dusk-network/bls12_381/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/dusk-network/bls12_381/compare/v0.14.2...v0.15.0
 [0.14.2]: https://github.com/dusk-network/bls12_381/compare/v0.14.1...v0.14.2
 [0.14.1]: https://github.com/dusk-network/bls12_381/compare/v0.14.0...v0.14.1
